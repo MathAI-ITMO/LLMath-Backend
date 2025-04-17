@@ -23,7 +23,7 @@ try
 
     builder.Services.AddCors(options =>
     {
-        var origins = configuration["CorsOrigins"] ?? throw new Exception("CorsOrigins not found");
+        var origins = configuration["CorsOrigins"].Split(';') ?? throw new Exception("CorsOrigins not found");
         options.AddDefaultPolicy(
             policy =>
             {
