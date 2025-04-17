@@ -12,6 +12,7 @@ using NLog.Web;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using MathLLMBackend.DataAccess.Contexts;
+using MathLLMBackend.Presentation.Configuration;
 
 var logger = LogManager.Setup().LoadConfigurationFromAppSettings().GetCurrentClassLogger();
 
@@ -20,19 +21,22 @@ try
     var builder = WebApplication.CreateBuilder(args);
     builder.Services.AddHttpLogging(o => { });
     var configuration = builder.Configuration;
+    var corsConfiguration = configuration.GetSection(nameof(CorsConfiguration)).Get<CorsConfiguration>() ?? new CorsConfiguration();
 
-    builder.Services.AddCors(options =>
+    if (corsConfiguration.Enabled)
     {
-        var origins = configuration["CorsOrigins"].Split(';') ?? throw new Exception("CorsOrigins not found");
-        options.AddDefaultPolicy(
-            policy =>
-            {
-                policy.WithOrigins(origins)
-                      .AllowAnyMethod()
-                      .AllowAnyHeader()
-                      .AllowCredentials();
-            });
-    });
+        builder.Services.AddCors(options =>
+        {
+            options.AddDefaultPolicy(
+                policy =>
+                {
+                    policy.WithOrigins(corsConfiguration.Origin.Split(';'))
+                        .AllowAnyMethod()
+                        .AllowAnyHeader()
+                        .AllowCredentials();
+                });
+        });
+    }
 
     builder.Logging.ClearProviders();
     builder.Host.UseNLog();
@@ -108,9 +112,12 @@ try
         app.UseSwagger();
         app.UseSwaggerUI();
     }
-    
-    app.UseCors();
-    
+
+    if (corsConfiguration.Enabled)
+    {
+        app.UseCors();
+    }
+
     app.MapIdentityApi<IdentityUser>();
     app.UseMiddleware<ExceptionHandlingMiddleware>();
     app.UseAuthentication();
