@@ -27,7 +27,7 @@ try
         options.AddDefaultPolicy(
             policy =>
             {
-                policy.AllowAnyOrigin()
+                policy.WithOrigins(origins)
                       .AllowAnyMethod()
                       .AllowAnyHeader()
                       .AllowCredentials();
