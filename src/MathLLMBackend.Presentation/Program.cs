@@ -27,9 +27,10 @@ try
         options.AddDefaultPolicy(
             policy =>
             {
-                policy.WithOrigins("http://localhost:23188")
+                policy.WithOrigins(origins)
                       .AllowAnyMethod()
-                      .AllowAnyHeader();
+                      .AllowAnyHeader()
+                      .AllowCredentials();
             });
     });
 
@@ -54,10 +55,8 @@ try
     
     builder.Services.ConfigureApplicationCookie(options =>
     {
-        options.Cookie.HttpOnly = false;
-        // Other cookie options if needed
-        options.Cookie.SecurePolicy = CookieSecurePolicy.None;
-        options.Cookie.SameSite = SameSiteMode.Lax; // Or Strict depending on your needs
+        options.Cookie.HttpOnly = true;
+        options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
     });
     
     
