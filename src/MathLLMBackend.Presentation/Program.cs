@@ -109,13 +109,14 @@ try
         app.UseSwaggerUI();
     }
     
+    app.UseCors();
+    
     app.MapIdentityApi<IdentityUser>();
     app.UseMiddleware<ExceptionHandlingMiddleware>();
     app.UseAuthentication();
     app.UseAuthorization();
     app.MapControllers();
     app.UseHttpLogging();
-    app.UseCors();
 
     app.Run();
 }
