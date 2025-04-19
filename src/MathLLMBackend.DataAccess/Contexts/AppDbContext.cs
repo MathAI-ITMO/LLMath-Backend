@@ -9,6 +9,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
 {
     public DbSet<Chat> Chats { get; set; }
     public DbSet<Message> Messages { get; set; }
+    public DbSet<Problem> Problems { get; set; }
+    public DbSet<ProblemVariation> ProblemVariations { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -59,6 +61,24 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
 
         modelBuilder.Entity<Chat>()
             .Property(c => c.Type)
+            .IsRequired();
+
+        modelBuilder.Entity<Problem>()
+            .HasMany(c => c.Variations);
+
+        modelBuilder.Entity<Problem>()
+            .Property(p => p.Name)
+            .IsRequired();
+
+            modelBuilder.Entity<Problem>()
+            .Property(p => p.Hash)
+            .IsRequired();
+
+        modelBuilder.Entity<ProblemVariation>()
+            .HasOne(v => v.Problem);
+
+        modelBuilder.Entity<ProblemVariation>()
+            .Property(v => v.Seed)
             .IsRequired();
         
         base.OnModelCreating(modelBuilder);
