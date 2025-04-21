@@ -52,6 +52,7 @@ using MathLLMBackend.Domain.Entities;
                 var response = _service.CreateMessage(message, ct);
 
                 var outputStream = Response.Body;
+                Response.ContentType = "text/event-stream";
 
                 await using var writer = new StreamWriter(outputStream);
 
