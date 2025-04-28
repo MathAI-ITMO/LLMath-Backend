@@ -14,6 +14,7 @@ public static class DataAccessRegistrar
             options.UseNpgsql(configuration.GetConnectionString("Postgres")));
             
         services.AddScoped<WarmupService>();
+        services.AddScoped<RoleInitializationService>();
         
         return services;
     }

@@ -1,66 +1,76 @@
 using MathLLMBackend.Domain.Entities;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
 namespace MathLLMBackend.DataAccess.Contexts;
 
-public class AppDbContext(DbContextOptions<AppDbContext> options)
-    : IdentityDbContext(options)
+public class AppDbContext : IdentityDbContext<ApplicationUser>
 {
-    public DbSet<Chat> Chats { get; set; }
-    public DbSet<Message> Messages { get; set; }
+    public DbSet<Chat> Chats { get; set; } = null!;
+    public DbSet<Message> Messages { get; set; } = null!;
+    public DbSet<InviteCode> InviteCodes { get; set; } = null!;
 
-    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
     {
-        modelBuilder.Entity<Chat>()
-            .HasMany(c => c.Messages)
-            .WithOne(m => m.Chat)
-            .HasForeignKey(m => m.ChatId);
+    }
 
-        modelBuilder.Entity<Chat>()
-            .HasKey(c => c.Id);
-        
-        modelBuilder.Entity<Chat>()
-            .HasOne(c => c.User)
-            .WithMany()
-            .HasForeignKey(c => c.UserId);
+    protected override void OnModelCreating(ModelBuilder builder)
+    {
+        base.OnModelCreating(builder);
 
-        modelBuilder.Entity<Chat>()
-            .Property(c => c.UserId)
-            .IsRequired();
-        
-        modelBuilder.Entity<Chat>()
-            .Property(c => c.Name)
-            .IsRequired();
+        // Ignore unused fields in ApplicationUser
+        builder.Entity<ApplicationUser>(entity =>
+        {
+            entity.Ignore(e => e.PhoneNumber);
+            entity.Ignore(e => e.PhoneNumberConfirmed);
+            entity.Ignore(e => e.TwoFactorEnabled);
+            entity.Ignore(e => e.LockoutEnd);
+            entity.Ignore(e => e.LockoutEnabled);
+            entity.Ignore(e => e.AccessFailedCount);
 
-        modelBuilder.Entity<Message>()
-            .Property(m => m.CreatedAt)
-            .IsRequired();
-        
-        modelBuilder.Entity<Message>()
-            .Property(m => m.CreatedAt)
-            .IsRequired();
-        
-        modelBuilder.Entity<Message>()
-            .Property(m => m.MessageType)
-            .IsRequired();
-        
-        modelBuilder.Entity<Message>()
-            .Property(m => m.ChatId)
-            .IsRequired();
-        
-        modelBuilder.Entity<Message>()
-            .Property(m => m.Text)
-            .IsRequired();
+            // Configure the one-to-many relationship with InviteCode
+            entity.HasOne(e => e.UsedInviteCode)
+                .WithMany(e => e.UsedBy)
+                .HasForeignKey(e => e.UsedInviteCodeId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
 
-        modelBuilder.Entity<Message>()
-            .Property(m => m.IsSystemPrompt)
-            .IsRequired();
+        builder.Entity<Chat>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Name).IsRequired();
+            entity.Property(e => e.UserId).IsRequired();
+            entity.HasOne(e => e.User)
+                .WithMany()
+                .HasForeignKey(e => e.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
 
-        modelBuilder.Entity<Chat>()
-            .Property(c => c.Type)
-            .IsRequired();
-        
-        base.OnModelCreating(modelBuilder);
+        builder.Entity<Message>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Text).IsRequired();
+            entity.Property(e => e.MessageType).IsRequired();
+            entity.HasOne(e => e.Chat)
+                .WithMany(e => e.Messages)
+                .HasForeignKey(e => e.ChatId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<InviteCode>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Code).IsRequired();
+            entity.Property(e => e.MaxUsages).IsRequired();
+            entity.Property(e => e.CurrentUsages).IsRequired();
+            entity.Property(e => e.CreatedAt).IsRequired();
+            entity.Property(e => e.CreatedById).IsRequired();
+            
+            entity.HasOne(e => e.CreatedBy)
+                .WithMany()
+                .HasForeignKey(e => e.CreatedById)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
     }
 }

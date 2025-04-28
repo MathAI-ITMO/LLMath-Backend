@@ -1,6 +1,7 @@
 using MathLLMBackend.Core.Configuration;
 using MathLLMBackend.Core.Services.ChatService;
 using MathLLMBackend.Core.Services.GeolinService;
+using MathLLMBackend.Core.Services.InviteCodeService;
 using MathLLMBackend.Core.Services.LlmService;
 using MathLLMBackend.Core.Services.PromptService;
 using Microsoft.Extensions.Configuration;
@@ -16,6 +17,7 @@ public class CoreServicesRegistrar
         services.AddTransient<ILlmService, LlmService>();
         services.AddTransient<IPromptService, PromptService>();
         services.AddTransient<IGeolinService, GeolinService>();
+        services.AddScoped<IInviteCodeService, InviteCodeService>();
         
         services.Configure<LlmServiceConfiguration>(configuration.GetSection("OpenAi"));
         services.Configure<PromptConfiguration>(configuration.GetSection("DefaultPrompts"));
