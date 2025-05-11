@@ -4,6 +4,8 @@ using MathLLMBackend.DataAccess;
 using MathLLMBackend.DataAccess.Services;
 using MathLLMBackend.GeolinClient;
 using MathLLMBackend.GeolinClient.Options;
+using MathLLMBackend.ProblemsClient;
+using MathLLMBackend.ProblemsClient.Options;
 using Microsoft.OpenApi.Models;
 using MathLLMBackend.Presentation.Middlewares;
 using Microsoft.AspNetCore.Authentication.Cookies;
@@ -47,6 +49,7 @@ try
 
     CoreServicesRegistrar.Configure(builder.Services, configuration);
     GeolinClientRegistrar.Configure(builder.Services, configuration.GetSection(nameof(GeolinClientOptions)).Bind);
+    ProblemsClientRegistrar.Configure(builder.Services, configuration.GetSection(nameof(ProblemsClientOptions)).Bind);
     DataAccessRegistrar.Configure(builder.Services, configuration);
     
     builder.Services.Configure<AdminConfiguration>(configuration.GetSection("AdminConfiguration"));
