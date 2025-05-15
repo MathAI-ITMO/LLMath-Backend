@@ -14,9 +14,9 @@ namespace MathLLMBackend.Presentation.Controllers
     {
         private readonly IChatService _chatService;
         private readonly ILogger<ChatController> _logger;
-        private readonly UserManager<IdentityUser> _userManager;
+        private readonly UserManager<ApplicationUser> _userManager;
 
-        public ChatController(IChatService chatService, ILogger<ChatController> logger, UserManager<IdentityUser> userManager)
+        public ChatController(IChatService chatService, ILogger<ChatController> logger, UserManager<ApplicationUser> userManager)
         {
             _chatService = chatService;
             _logger = logger;
@@ -32,7 +32,7 @@ namespace MathLLMBackend.Presentation.Controllers
             {
                 return Unauthorized();
             }
-            
+
             // TODO: refactor move logic to service
             var chat = new Chat(dto.Name, userId);
 
@@ -44,13 +44,13 @@ namespace MathLLMBackend.Presentation.Controllers
             {
                 await _chatService.Create(chat, dto.ProblemHash, ct);
             }
-            
+
             return Ok(
                 new ChatDto(chat.Id, chat.Name, chat.Type.ToString())
             );
-            
+
         }
-        
+
         [HttpGet("get")]
         [Authorize]
         public async Task<IActionResult> GetChats(CancellationToken ct)
@@ -60,7 +60,7 @@ namespace MathLLMBackend.Presentation.Controllers
             {
                 return Unauthorized();
             }
-            
+
             var chats = await _chatService.GetUserChats(userId, ct);
             return Ok(chats.Select(c => new ChatDto(c.Id, c.Name, c.Type.ToString())).ToList());
         }
@@ -74,21 +74,21 @@ namespace MathLLMBackend.Presentation.Controllers
             {
                 return Unauthorized();
             }
-            
+
             var chat = await _chatService.GetChatById(id, ct);
 
             if (chat is null)
             {
                 return NotFound();
             }
-            
+
             if (chat.User.Id != userId)
             {
                 return Unauthorized();
             }
-            
+
             await _chatService.Delete(chat, ct);
-            
+
             return Ok();
         }
     }

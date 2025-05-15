@@ -1,3 +1,4 @@
+using System.Text;
 using MathLLMBackend.Core;
 using MathLLMBackend.DataAccess;
 using MathLLMBackend.DataAccess.Services;
@@ -7,36 +8,41 @@ using MathLLMBackend.ProblemsClient;
 using MathLLMBackend.ProblemsClient.Options;
 using Microsoft.OpenApi.Models;
 using MathLLMBackend.Presentation.Middlewares;
-using Microsoft.AspNetCore.Authentication.Cookies;
-using Microsoft.AspNetCore.CookiePolicy;
 using NLog;
 using NLog.Web;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
 using MathLLMBackend.DataAccess.Contexts;
-using MathLLMBackend.Presentation.Configuration;
+using MathLLMBackend.Domain.Configuration;
+using MathLLMBackend.Domain.Entities;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
 
-var logger = LogManager.Setup().LoadConfigurationFromAppSettings().GetCurrentClassLogger();
+var logger = LogManager.Setup()
+    .LoadConfigurationFromAppSettings()
+    .GetCurrentClassLogger();
 
 try
 {
     var builder = WebApplication.CreateBuilder(args);
-    builder.Services.AddHttpLogging(o => { });
+    builder.Services.AddHttpLogging();
+
     var configuration = builder.Configuration;
-    var corsConfiguration = configuration.GetSection(nameof(CorsConfiguration)).Get<CorsConfiguration>() ?? new CorsConfiguration();
+    var corsConfiguration = configuration
+        .GetSection(nameof(CorsConfiguration))
+        .Get<CorsConfiguration>()
+        ?? new CorsConfiguration();
 
     if (corsConfiguration.Enabled)
     {
         builder.Services.AddCors(options =>
         {
-            options.AddDefaultPolicy(
-                policy =>
-                {
-                    policy.WithOrigins(corsConfiguration.Origin.Split(';'))
-                        .AllowAnyMethod()
-                        .AllowAnyHeader()
-                        .AllowCredentials();
-                });
+            options.AddDefaultPolicy(policy =>
+            {
+                policy.WithOrigins(corsConfiguration.Origin.Split(';'))
+                      .AllowAnyMethod()
+                      .AllowAnyHeader()
+                      .AllowCredentials();
+            });
         });
     }
 
@@ -44,84 +50,152 @@ try
     builder.Host.UseNLog();
 
     CoreServicesRegistrar.Configure(builder.Services, configuration);
-    GeolinClientRegistrar.Configure(builder.Services, configuration.GetSection(nameof(GeolinClientOptions)).Bind);
-    ProblemsClientRegistrar.Configure(builder.Services, configuration.GetSection(nameof(ProblemsClientOptions)).Bind);
+    GeolinClientRegistrar.Configure(
+        builder.Services,
+        configuration.GetSection(nameof(GeolinClientOptions)).Bind);
+    ProblemsClientRegistrar.Configure(
+        builder.Services,
+        configuration.GetSection(nameof(ProblemsClientOptions)).Bind);
     DataAccessRegistrar.Configure(builder.Services, configuration);
-    
-    builder.Services.AddIdentityApiEndpoints<IdentityUser>(options =>
+
+    builder.Services.Configure<AdminConfiguration>(
+        configuration.GetSection("AdminConfiguration"));
+
+    // Identity setup (registers the cookie handler internally)
+    builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
     {
         options.User.RequireUniqueEmail = true;
         options.SignIn.RequireConfirmedEmail = false;
+        options.Password.RequireDigit = true;
+        options.Password.RequireLowercase = true;
+        options.Password.RequireUppercase = true;
+        options.Password.RequireNonAlphanumeric = true;
+        options.Password.RequiredLength = 8;
+        options.User.AllowedUserNameCharacters =
+            "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._@+";
     })
-        .AddEntityFrameworkStores<AppDbContext>();
-    
-    builder.Services.AddAuthorization();
+    .AddEntityFrameworkStores<AppDbContext>()
+    .AddDefaultTokenProviders();
+
+    // Configure cookie options (SameSite=None to allow cross-site fetches)
+    builder.Services.ConfigureApplicationCookie(options =>
+    {
+        options.Cookie.Name         = ".AspNetCore.Identity.Application";
+        options.Cookie.HttpOnly     = true;
+        options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+        options.Cookie.SameSite     = SameSiteMode.None;
+    });
+
+    // Add Authorization policies
+    builder.Services.AddAuthorization(options =>
+    {
+        options.AddPolicy("RequireAdminRole",
+            policy => policy.RequireRole("Admin"));
+        options.AddPolicy("RequireUserRole",
+            policy => policy.RequireRole("User", "Admin"));
+    });
+
+    // Authentication: cookie first, fallback to JWT
+    builder.Services.AddAuthentication(options =>
+    {
+        options.DefaultAuthenticateScheme = IdentityConstants.ApplicationScheme;
+        options.DefaultSignInScheme       = IdentityConstants.ApplicationScheme;
+        options.DefaultChallengeScheme    = JwtBearerDefaults.AuthenticationScheme;
+    })
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer           = true,
+            ValidateAudience         = true,
+            ValidateLifetime         = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer              = configuration["Jwt:Issuer"],
+            ValidAudience            = configuration["Jwt:Audience"],
+            IssuerSigningKey = new SymmetricSecurityKey(
+                Encoding.UTF8.GetBytes(
+                    configuration["Jwt:Key"]
+                    ?? throw new InvalidOperationException("JWT key not found")))
+        };
+    });
 
     builder.Services.AddControllers();
     builder.Services.AddEndpointsApiExplorer();
-    
-    builder.Services.ConfigureApplicationCookie(options =>
-    {
-        options.Cookie.HttpOnly = true;
-        options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
-    });
-    
-    
-    
+
+    // Swagger with cookie & bearer definitions
     builder.Services.AddSwaggerGen(c =>
+    {
+        c.SwaggerDoc("v1", new OpenApiInfo { Title = "MathLLM API", Version = "v1" });
+
+        c.AddSecurityDefinition("cookieAuth", new OpenApiSecurityScheme
         {
-            var openApiSecurityScheme = new OpenApiSecurityScheme()
-            {
-                Description = "JWT Authorization header using the Bearer scheme. \r\n\r\n Enter 'Bearer [space] {your token}'",
-                Name = "Authorization",
-                In = ParameterLocation.Header,
-                Type = SecuritySchemeType.ApiKey,
-                Scheme = "Bearer"
-            };
+            Type        = SecuritySchemeType.ApiKey,
+            In          = ParameterLocation.Cookie,
+            Name        = ".AspNetCore.Identity.Application",
+            Description = "Cookie authentication. Use /api/auth/login to get it.",
+            Scheme      = "cookie"
+        });
 
-            c.AddSecurityDefinition("Bearer", openApiSecurityScheme);
+        c.AddSecurityDefinition("bearerAuth", new OpenApiSecurityScheme
+        {
+            Type         = SecuritySchemeType.Http,
+            Scheme       = "bearer",
+            BearerFormat = "JWT",
+            Description  = "JWT Bearer. Use /api/auth/login?useToken=true."
+        });
 
-            var openApiSecurityRequirement = new OpenApiSecurityRequirement()
-            {
+        c.AddSecurityRequirement(new OpenApiSecurityRequirement
+        {
             {
                 new OpenApiSecurityScheme
                 {
                     Reference = new OpenApiReference
                     {
                         Type = ReferenceType.SecurityScheme,
-                        Id = "Bearer"
-                    },
-                    Scheme = "oauth2",
-                    Name = "Bearer",
-                    In = ParameterLocation.Header
+                        Id   = "cookieAuth"
+                    }
                 },
-                new List<string>()
+                Array.Empty<string>()
+            },
+            {
+                new OpenApiSecurityScheme
+                {
+                    Reference = new OpenApiReference
+                    {
+                        Type = ReferenceType.SecurityScheme,
+                        Id   = "bearerAuth"
+                    }
+                },
+                Array.Empty<string>()
             }
-            };
-
-            c.AddSecurityRequirement(openApiSecurityRequirement);
         });
+    });
 
     var app = builder.Build();
 
+    // Warmup & role initialization
     using (var scope = app.Services.CreateScope())
     {
         var warmupService = scope.ServiceProvider.GetRequiredService<WarmupService>();
         await warmupService.WarmupAsync();
+
+        var roleInit = scope.ServiceProvider.GetRequiredService<RoleInitializationService>();
+        await roleInit.InitializeRolesAsync();
     }
 
     if (app.Environment.IsDevelopment())
     {
         app.UseSwagger();
-        app.UseSwaggerUI();
+        app.UseSwaggerUI(c =>
+        {
+            c.SwaggerEndpoint("/swagger/v1/swagger.json", "MathLLM API v1");
+            c.EnablePersistAuthorization();
+        });
     }
 
     if (corsConfiguration.Enabled)
-    {
         app.UseCors();
-    }
 
-    app.MapIdentityApi<IdentityUser>();
     app.UseMiddleware<ExceptionHandlingMiddleware>();
     app.UseAuthentication();
     app.UseAuthorization();
@@ -130,12 +204,12 @@ try
 
     app.Run();
 }
-catch (Exception exception)
+catch (Exception ex)
 {
-    logger.Error(exception, "Stopped program because of exception");
+    logger.Error(ex, "Stopped program because of exception");
     throw;
 }
 finally
 {
-    NLog.LogManager.Shutdown();
+    LogManager.Shutdown();
 }

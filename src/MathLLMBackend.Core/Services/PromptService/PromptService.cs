@@ -19,7 +19,7 @@ public class PromptService : IPromptService
 
     public string GetTutorSolutionPrompt(string solution)
     {
-        return _promptConfiguration.TutorSolutionPrompt.Replace("{solution}", solution);
+        return ReplacePlaceholder(_promptConfiguration.TutorSolutionPrompt, "{solution}", solution);
     }
 
     public string GetSolverSystemPrompt()
@@ -29,11 +29,16 @@ public class PromptService : IPromptService
 
     public string GetSolverTaskPrompt(string task)
     {
-        return _promptConfiguration.SolverTaskPrompt.Replace("{problem}", task);
+        return ReplacePlaceholder(_promptConfiguration.SolverTaskPrompt, "{problem}", task);
     }
 
     public string GetDefaultSystemPrompt()
     {
         return _promptConfiguration.DefaultSystemPrompt;
     }
-} 
+
+    private string ReplacePlaceholder(string template, string placeholder, string value)
+    {
+        return template.Replace(placeholder, value);
+    }
+}

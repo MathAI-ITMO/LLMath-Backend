@@ -1,4 +1,4 @@
-namespace MathLLMBackend.Presentation.Configuration;
+namespace MathLLMBackend.Domain.Configuration;
 
 public class CorsConfiguration
 {

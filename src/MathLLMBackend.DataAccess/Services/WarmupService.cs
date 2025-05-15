@@ -20,9 +20,9 @@ public class WarmupService
         try
         {
             _logger.LogInformation("Starting database warmup...");
-            
+
             await _dbContext.Database.MigrateAsync();
-            
+
             _logger.LogInformation("Database warmup completed successfully");
         }
         catch (Exception ex)
@@ -31,4 +31,4 @@ public class WarmupService
             throw;
         }
     }
-} 
+}

@@ -20,7 +20,7 @@ public class ProblemsService : IProblemsService
     }
     public async Task<List<Problem>> GetSavedProblems(CancellationToken ct = default)
     {
-        try  
+        try
         {
             return await _problemsApi.GetProblems();
         }
@@ -86,7 +86,7 @@ public class ProblemsService : IProblemsService
             }
             _logger.LogError(ex, "Error fetching problems from external problems service {message}", ex.Message);
             throw;
-        }  
+        }
     }
     public async Task<List<string>> GetAllNames(CancellationToken ct = default)
     {
