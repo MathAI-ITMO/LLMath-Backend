@@ -27,4 +27,4 @@ public interface IGeolinApi
     [Post("/problem-answer-check")]
     [Headers("Authorization: Basic")]
     Task<ProblemAnswerCheckResponse> CheckProblemAnswer([Body] ProblemAnswerCheckRequest request);
-} 
+}

@@ -19,4 +19,4 @@ public interface IProblemsAPI
 
     [Get("/api/names")]
     Task<List<string>> GetNames();
-} 
+}

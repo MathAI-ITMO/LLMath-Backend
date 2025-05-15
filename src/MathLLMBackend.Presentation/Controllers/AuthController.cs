@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
 using MathLLMBackend.Core.Services.InviteCodeService;
 using MathLLMBackend.Domain.Entities;
+using System.Text.Json;
 
 namespace MathLLMBackend.Presentation.Controllers;
 
@@ -14,6 +15,8 @@ namespace MathLLMBackend.Presentation.Controllers;
 [Route("api/[controller]")]
 public class AuthController : ControllerBase
 {
+    private const int SessionDurationDays = 7;
+    
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly SignInManager<ApplicationUser> _signInManager;
     private readonly IConfiguration _configuration;
@@ -33,7 +36,7 @@ public class AuthController : ControllerBase
 
     public record RegisterRequest(string Email, string Password, string InviteCode);
     public record LoginRequest(string Email, string Password);
-    public record TokenResponse(string Token, string TokenType);
+    public record TokenResponse(string Token, string TokenType, string[] Roles);
 
     [HttpPost("register")]
     [ProducesResponseType(StatusCodes.Status200OK)]
@@ -80,11 +83,23 @@ public class AuthController : ControllerBase
         var result = await _signInManager.PasswordSignInAsync(user, request.Password, isPersistent: true, lockoutOnFailure: false);
         if (result.Succeeded)
         {
+            var roles = await _userManager.GetRolesAsync(user);
             if (useToken)
             {
                 var token = await GenerateJwtTokenAsync(user);
-                return Ok(new TokenResponse(token, "Bearer"));
+                return Ok(new TokenResponse(token, "Bearer", roles.ToArray()));
             }
+            
+            // Set roles as a cookie when using cookie authentication
+            var rolesJson = JsonSerializer.Serialize(roles);
+            Response.Cookies.Append("UserRoles", rolesJson, new CookieOptions
+            {
+                HttpOnly = true,
+                Secure = true,
+                SameSite = SameSiteMode.Strict,
+                Expires = DateTime.Now.AddDays(SessionDurationDays)
+            });
+            
             return Ok();
         }
 
@@ -97,6 +112,7 @@ public class AuthController : ControllerBase
     public async Task<IActionResult> Logout()
     {
         await _signInManager.SignOutAsync();
+        Response.Cookies.Delete("UserRoles");
         return Ok();
     }
 
@@ -113,7 +129,7 @@ public class AuthController : ControllerBase
         }
 
         var roles = await _userManager.GetRolesAsync(user);
-        
+
         return Ok(new
         {
             user.Id,
@@ -143,10 +159,10 @@ public class AuthController : ControllerBase
             issuer: _configuration["Jwt:Issuer"],
             audience: _configuration["Jwt:Audience"],
             claims: claims,
-            expires: DateTime.Now.AddDays(7),
+            expires: DateTime.Now.AddDays(SessionDurationDays),
             signingCredentials: creds
         );
 
         return new JwtSecurityTokenHandler().WriteToken(token);
     }
-} 
+}

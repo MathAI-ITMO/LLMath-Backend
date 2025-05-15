@@ -53,4 +53,4 @@ public class RoleInitializationService
             await _userManager.AddToRoleAsync(adminUser, "Admin");
         }
     }
-} 
+}

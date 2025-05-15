@@ -12,10 +12,10 @@ public static class DataAccessRegistrar
     {
         services.AddDbContext<AppDbContext>(options =>
             options.UseNpgsql(configuration.GetConnectionString("Postgres")));
-            
+
         services.AddScoped<WarmupService>();
         services.AddScoped<RoleInitializationService>();
-        
+
         return services;
     }
-} 
+}

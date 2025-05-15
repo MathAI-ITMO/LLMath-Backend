@@ -24,9 +24,9 @@ public class ChatService : IChatService
     private readonly ILogger<ChatService> _logger;
 
     public ChatService(
-        AppDbContext dbContext, 
-        ILlmService llmService, 
-        IGeolinApi geolinApi, 
+        AppDbContext dbContext,
+        ILlmService llmService,
+        IGeolinApi geolinApi,
         IPromptService promptService,
         IOptions<LlmServiceConfiguration> llmConfig,
         ILogger<ChatService> logger)
@@ -38,7 +38,7 @@ public class ChatService : IChatService
         _llmConfig = llmConfig;
         _logger = logger;
     }
-    
+
     public async Task<Chat> Create(Chat chat, CancellationToken ct)
     {
         chat.Type = ChatType.Chat;
@@ -49,7 +49,7 @@ public class ChatService : IChatService
                 _promptService.GetDefaultSystemPrompt(),
                 MessageType.System)
             , ct);
-        
+
         await _dbContext.SaveChangesAsync(ct);
         return res.Entity;
     }
@@ -57,7 +57,7 @@ public class ChatService : IChatService
     public async Task<Chat> Create(Chat chat, string problemHash, CancellationToken ct)
     {
         chat.Type = ChatType.ProblemSolver;
-        
+
         var problem = await _geolinApi.GetProblemCondition(
             new ProblemConditionRequest()
             {
@@ -66,24 +66,24 @@ public class ChatService : IChatService
                 Lang = "ru"
             });
 
-        _logger.LogInformation("Problem hash: {ProblemHash}, Problem condition: {ProblemCondition}", 
+        _logger.LogInformation("Problem hash: {ProblemHash}, Problem condition: {ProblemCondition}",
             problemHash, problem.Condition);
-        
+
         var solution = await _llmService.SolveProblem(problem.Condition, ct);
         _logger.LogInformation("Solution for problem {ProblemHash}: {Solution}", problemHash, solution);
 
         var newChat = await _dbContext.Chats.AddAsync(chat, ct);
         var tutorSystemPrompt = _promptService.GetTutorSystemPrompt();
         var tutorSolutionPrompt = _promptService.GetTutorSolutionPrompt(solution);
-        
+
         var tutorSystemMessage = new Message(newChat.Entity, tutorSystemPrompt, MessageType.System);
         var tutorUserMessage = new Message(newChat.Entity, tutorSolutionPrompt, MessageType.User, isSystemPrompt: true);
         var firstBotMessage = new Message(newChat.Entity, problem.Condition, MessageType.Assistant);
-        
+
         await _dbContext.Messages.AddRangeAsync([tutorSystemMessage, tutorUserMessage, firstBotMessage], ct);
-        
+
         await _dbContext.SaveChangesAsync(ct);
-        
+
         return chat;
     }
 
@@ -99,7 +99,7 @@ public class ChatService : IChatService
         _dbContext.Chats.Remove(chat);
         await _dbContext.SaveChangesAsync(ct);
     }
-    
+
     public async IAsyncEnumerable<string> CreateMessage(Message message, CancellationToken ct)
     {
         _dbContext.Messages.Add(message);
@@ -113,12 +113,12 @@ public class ChatService : IChatService
             fullText.Append(messageText);
             yield return messageText;
         }
-        
+
         var newMessage = new Message(message.Chat, fullText.ToString(), MessageType.Assistant);
         _dbContext.Messages.Add(newMessage);
         await _dbContext.SaveChangesAsync(ct);
     }
-    
+
     public async Task<List<Message>> GetAllMessageFromChat(Chat chat, CancellationToken ct)
     {
         return await _dbContext.Messages.Where(m => m.Chat == chat).ToListAsync(ct);

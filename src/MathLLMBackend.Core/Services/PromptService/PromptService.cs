@@ -41,4 +41,4 @@ public class PromptService : IPromptService
     {
         return template.Replace(placeholder, value);
     }
-} 
+}
