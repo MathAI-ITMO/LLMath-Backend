@@ -113,7 +113,7 @@ public class AuthController : ControllerBase
         }
 
         var roles = await _userManager.GetRolesAsync(user);
-        
+
         return Ok(new
         {
             user.Id,
@@ -149,4 +149,4 @@ public class AuthController : ControllerBase
 
         return new JwtSecurityTokenHandler().WriteToken(token);
     }
-} 
+}

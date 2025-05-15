@@ -52,14 +52,14 @@ public class InviteCodeService : IInviteCodeService
         var inviteCode = await _context.InviteCodes
             .Include(ic => ic.UsedBy)
             .FirstOrDefaultAsync(ic => ic.Id == id, ct);
-            
+
         if (inviteCode != null)
         {
             if (inviteCode.UsedBy.Any())
             {
                 throw new InvalidOperationException("Cannot delete invite code that has been used by users");
             }
-            
+
             _context.InviteCodes.Remove(inviteCode);
             await _context.SaveChangesAsync(ct);
         }
@@ -84,4 +84,4 @@ public class InviteCodeService : IInviteCodeService
             return false;
         }
     }
-} 
+}

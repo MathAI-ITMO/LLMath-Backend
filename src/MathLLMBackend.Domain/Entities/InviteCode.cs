@@ -44,4 +44,4 @@ public class InviteCode
         user.UsedInviteCodeId = Id;
         UsedBy.Add(user);
     }
-} 
+}

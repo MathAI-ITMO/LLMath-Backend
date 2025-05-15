@@ -4,7 +4,7 @@ public class LlmServiceConfiguration
 {
     public required ModelConfiguration ChatModel { get; init; }
     public required ModelConfiguration SolverModel { get; init; }
-    
+
     public class ModelConfiguration
     {
         public required string Token { get; init; }

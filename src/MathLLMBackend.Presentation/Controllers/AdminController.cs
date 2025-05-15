@@ -163,4 +163,4 @@ public class AdminController : ControllerBase
         await _inviteCodeService.DeleteInviteCodeAsync(id);
         return Ok();
     }
-} 
+}

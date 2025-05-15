@@ -19,7 +19,7 @@ public class LlmService : ILlmService
         _config = config;
         _promptService = promptService;
     }
-    
+
     public async IAsyncEnumerable<string> GenerateNextMessageStreaming(List<Message> messages, CancellationToken ct)
     {
         var config = _config.Value.ChatModel;
@@ -57,7 +57,7 @@ public class LlmService : ILlmService
         return completion!.Value.Content[0].Text;
     }
 
-    private ChatClient CreateChatClient(ModelConfiguration config)
+    private ChatClient CreateChatClient(LlmServiceConfiguration.ModelConfiguration config)
     {
         return new ChatClient(
             model: config.Model,

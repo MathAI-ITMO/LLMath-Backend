@@ -20,7 +20,7 @@ public class CoreServicesRegistrar
         services.AddTransient<IGeolinService, GeolinService>();
         services.AddScoped<IInviteCodeService, InviteCodeService>();
         services.AddTransient<IProblemsService, ProblemsService>();
-        
+
         services.Configure<LlmServiceConfiguration>(configuration.GetSection("OpenAi"));
         services.Configure<PromptConfiguration>(configuration.GetSection("DefaultPrompts"));
         return services;

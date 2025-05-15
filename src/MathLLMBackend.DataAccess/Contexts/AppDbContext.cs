@@ -66,7 +66,7 @@ public class AppDbContext : IdentityDbContext<ApplicationUser>
             entity.Property(e => e.CurrentUsages).IsRequired();
             entity.Property(e => e.CreatedAt).IsRequired();
             entity.Property(e => e.CreatedById).IsRequired();
-            
+
             entity.HasOne(e => e.CreatedBy)
                 .WithMany()
                 .HasForeignKey(e => e.CreatedById)
