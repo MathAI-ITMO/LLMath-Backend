@@ -306,7 +306,6 @@ namespace MathLLMBackend.Presentation.Controllers
         {
             // Константы для прямого обращения к GeoLin API
             const string GEOLIN_BASE_URL = "https://geolin.dev.mgsds.com";
-            const string GEOLIN_AUTH_HEADER = "Basic Z2VvbGluLXVzZXI6RmczNXRoaDI2a2ZO";
             
             _logger.LogInformation("CheckAnswerDirect called with Hash: {Hash}, AnswerAttempt: {AnswerAttempt}, Seed: {Seed}",
                 request.Hash, request.AnswerAttempt, request.Seed);
@@ -324,7 +323,6 @@ namespace MathLLMBackend.Presentation.Controllers
             try
             {
                 using var httpClient = new HttpClient();
-                httpClient.DefaultRequestHeaders.Add("Authorization", GEOLIN_AUTH_HEADER);
 
                 var payload = new Dictionary<string, object>
                 {

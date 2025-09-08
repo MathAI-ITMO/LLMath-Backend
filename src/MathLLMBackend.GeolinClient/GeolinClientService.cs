@@ -14,13 +14,11 @@ public static class GeolinClientRegistrar
 
         services
             .Configure(configuration)
-            .AddTransient<AuthMessageHandler>()
             .AddRefitClient<IGeolinApi>()
             .ConfigureHttpClient(c =>
             {
                 c.BaseAddress = new Uri(config.BaseAddress);
-            })
-            .AddHttpMessageHandler<AuthMessageHandler>();
+            });
 
         return services;
     }
