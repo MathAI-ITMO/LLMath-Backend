@@ -2,6 +2,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using MathLLMBackend.DataAccess.Contexts;
 using MathLLMBackend.Domain.Enums;
+using MathLLMBackend.Presentation.Dtos.Stats;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -87,37 +88,4 @@ public class StatsController : ControllerBase
         };
         return Ok(detail);
     }
-
-    public class UserStatsDto
-    {
-        public string UserId { get; set; } = string.Empty;
-        public string FirstName { get; set; } = string.Empty;
-        public string LastName { get; set; } = string.Empty;
-        public string Email { get; set; } = string.Empty;
-        public string StudentGroup { get; set; } = string.Empty;
-        public int SolvedCount { get; set; }
-        public int InProgressCount { get; set; }
-        public int NormalChatsCount { get; set; }
-    }
-
-    public class TaskItemDto
-    {
-        public Guid UserTaskId { get; set; }
-        public string DisplayName { get; set; } = string.Empty;
-        public Guid? ChatId { get; set; }
-        public int TaskType { get; set; }
-    }
-
-    public class ChatItemDto
-    {
-        public Guid ChatId { get; set; }
-        public string Name { get; set; } = string.Empty;
-    }
-
-    public class UserDetailDto
-    {
-        public List<TaskItemDto> SolvedTasks { get; set; } = new();
-        public List<TaskItemDto> InProgressTasks { get; set; } = new();
-        public List<ChatItemDto> Chats { get; set; } = new();
-    }
-} 
+}

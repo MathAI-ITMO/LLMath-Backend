@@ -4,4 +4,4 @@ namespace MathLLMBackend.Core.Dtos; // Изменено пространство
 
 public record StartUserTaskRequestDto(
     [Required] Guid ChatId
-); 
+);

@@ -22,7 +22,7 @@ namespace MathLLMBackend.Presentation.Controllers
             _logger = logger;
             _userManager = userManager;
         }
-    
+
         [HttpPost("complete")]
         [Authorize]
         public async Task<IActionResult> Complete([FromBody] MessageCreateDto dto, CancellationToken ct)
@@ -43,9 +43,9 @@ namespace MathLLMBackend.Presentation.Controllers
             {
                 return Forbid();
             }
-            
+
             var message = new Message(chat, dto.Text, MessageType.User);
-            
+
             string llmResponseText = await _service.CreateMessage(message, ct);
 
             if (Response.HasStarted)
@@ -59,10 +59,10 @@ namespace MathLLMBackend.Presentation.Controllers
                 _logger.LogWarning("LLM service returned empty or null response for chat {ChatId}, user message: {UserMessage}", dto.ChatId, dto.Text);
                 return Ok(string.Empty);
             }
-            
+
             return Ok(llmResponseText);
         }
-    
+
         [HttpGet("get-messages-from-chat")]
         //[Authorize]
         public async Task<IActionResult> GetAllMessagesFromChat(Guid chatId, CancellationToken ct)
@@ -81,9 +81,9 @@ namespace MathLLMBackend.Presentation.Controllers
 
             // if (chat.UserId != userId)
             //     return Unauthorized();
-            
+
             var messages = await _service.GetAllMessageFromChat(chat, ct);
-            
+
             return Ok(
                 messages.Where(m => !m.IsSystemPrompt)
                     .Select(m => new MessageDto(m.Id, m.ChatId, m.Text, m.MessageType.ToString(), m.CreatedAt))

@@ -28,4 +28,4 @@ public interface IUserTaskService
     Task<UserTask?> GetUserTaskByIdAsync(Guid userTaskId, string userId, CancellationToken cancellationToken = default);
 
     Task<UserTaskDto?> CompleteTaskAsync(Guid userTaskId, string userId, CancellationToken cancellationToken = default);
-} 
+}

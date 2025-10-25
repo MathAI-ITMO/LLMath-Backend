@@ -10,4 +10,4 @@ public interface IProblemsService
     Task<List<string>> GetAllTypes(CancellationToken ct = default);
     Task<Problem?> GetProblemFromDbAsync(string problemDbId, CancellationToken ct = default);
     Task<List<Problem>> GetSavedProblemsByTypes(string typeName, CancellationToken ct = default);
-} 
+}

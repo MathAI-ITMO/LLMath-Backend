@@ -18,7 +18,7 @@ public class AppDbContext : IdentityDbContext<ApplicationUser>
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
-        
+
         modelBuilder.Entity<Chat>()
             .HasMany(c => c.Messages)
             .WithOne(m => m.Chat)
@@ -26,7 +26,7 @@ public class AppDbContext : IdentityDbContext<ApplicationUser>
 
         modelBuilder.Entity<Chat>()
             .HasKey(c => c.Id);
-        
+
         modelBuilder.Entity<Chat>()
             .HasOne(c => c.User)
             .WithMany()
@@ -35,7 +35,7 @@ public class AppDbContext : IdentityDbContext<ApplicationUser>
         modelBuilder.Entity<Chat>()
             .Property(c => c.UserId)
             .IsRequired();
-        
+
         modelBuilder.Entity<Chat>()
             .Property(c => c.Name)
             .IsRequired();
@@ -43,15 +43,15 @@ public class AppDbContext : IdentityDbContext<ApplicationUser>
         modelBuilder.Entity<Message>()
             .Property(m => m.CreatedAt)
             .IsRequired();
-        
+
         modelBuilder.Entity<Message>()
             .Property(m => m.MessageType)
             .IsRequired();
-        
+
         modelBuilder.Entity<Message>()
             .Property(m => m.ChatId)
             .IsRequired();
-        
+
         modelBuilder.Entity<Message>()
             .Property(m => m.Text)
             .IsRequired();
@@ -63,20 +63,20 @@ public class AppDbContext : IdentityDbContext<ApplicationUser>
         modelBuilder.Entity<Chat>()
             .Property(c => c.Type)
             .IsRequired();
-            
+
         // Конфигурация для ApplicationUser
         modelBuilder.Entity<ApplicationUser>()
             .Property(u => u.FirstName)
             .HasMaxLength(100);
-            
+
         modelBuilder.Entity<ApplicationUser>()
             .Property(u => u.LastName)
             .HasMaxLength(100);
-            
+
         modelBuilder.Entity<ApplicationUser>()
             .Property(u => u.StudentGroup)
             .HasMaxLength(20);
-            
+
         // Конфигурация для UserTask
         modelBuilder.Entity<UserTask>(entity =>
         {
@@ -100,8 +100,8 @@ public class AppDbContext : IdentityDbContext<ApplicationUser>
             entity.HasIndex(ut => new { ut.ApplicationUserId, ut.TaskType });
             entity.HasIndex(ut => ut.ProblemId);
             entity.HasIndex(ut => ut.AssociatedChatId).IsUnique(false); // Может быть null или повторяться, если переделывать задачи?
-                                                                         // Если чат уникален для задачи, то .IsUnique() - но AssociatedChatId nullable.
-                                                                         // Пока оставим неуникальный индекс.
+                                                                        // Если чат уникален для задачи, то .IsUnique() - но AssociatedChatId nullable.
+                                                                        // Пока оставим неуникальный индекс.
         });
     }
 }

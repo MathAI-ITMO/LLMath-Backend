@@ -21,7 +21,7 @@ public class ProblemsService : IProblemsService
     }
     public async Task<List<Problem>> GetSavedProblems(CancellationToken ct = default)
     {
-        try  
+        try
         {
             return await _problemsApi.GetProblems();
         }
@@ -87,7 +87,7 @@ public class ProblemsService : IProblemsService
             }
             _logger.LogError(ex, "Error fetching problems by name {name} from external problems service: {message}", name, ex.Message);
             throw;
-        }  
+        }
     }
     public async Task<List<Problem>> GetSavedProblemsByTypes(string typeName, CancellationToken ct = default)
     {
@@ -104,7 +104,7 @@ public class ProblemsService : IProblemsService
             }
             _logger.LogError(ex, "Error fetching problems by type {typeName} from external problems service: {message}", typeName, ex.Message);
             throw;
-        }  
+        }
     }
     public async Task<List<string>> GetAllTypes(CancellationToken ct = default)
     {
@@ -120,7 +120,7 @@ public class ProblemsService : IProblemsService
     }
     public async Task<Problem?> GetProblemFromDbAsync(string problemDbId, CancellationToken ct = default)
     {
-        try  
+        try
         {
             return await _problemsApi.GetProblemById(problemDbId);
         }

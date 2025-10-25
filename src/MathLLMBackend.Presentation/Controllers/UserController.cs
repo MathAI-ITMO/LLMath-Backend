@@ -43,4 +43,4 @@ namespace MathLLMBackend.Presentation.Controllers
                 user.StudentGroup));
         }
     }
-} 
+}

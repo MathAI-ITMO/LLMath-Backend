@@ -23,7 +23,7 @@ public class TasksController : ControllerBase
     public async Task<IActionResult> GetProblems([FromQuery] int page = 1, [FromQuery] int size = 10, [FromQuery] string? prefixName = "", CancellationToken ct = default)
     {
         var response = await _geolinService.GetProblems(page, size, prefixName, ct);
-        
+
         var problems = response.Problems.Select(p => new ProblemDto(
             Hash: p.Hash,
             Name: p.Name,
@@ -64,7 +64,7 @@ public class TasksController : ControllerBase
         {
             return NotFound();
         }
-        return Ok(problems);     
+        return Ok(problems);
     }
 
     [HttpGet("getAllNames")]
@@ -73,5 +73,5 @@ public class TasksController : ControllerBase
     {
         var names = await _problemsService.GetAllTypes(ct);
         return Ok(names);
-    }    
-} 
+    }
+}

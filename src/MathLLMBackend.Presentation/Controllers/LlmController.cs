@@ -1,4 +1,5 @@
 using MathLLMBackend.Core.Services.LlmService;
+using MathLLMBackend.Presentation.Dtos.Llm;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -21,7 +22,7 @@ public class LlmController : ControllerBase
     /// Решает математическую задачу с помощью LLM
     /// </summary>
     [HttpPost("solve-problem")]
-    public async Task<IActionResult> SolveProblem([FromBody] SolveProblemRequest request, CancellationToken ct)
+    public async Task<IActionResult> SolveProblem([FromBody] SolveProblemRequestDto request, CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(request.ProblemDescription))
         {
@@ -32,7 +33,7 @@ public class LlmController : ControllerBase
         {
             _logger.LogInformation("Solving problem using LLM: {Problem}", request.ProblemDescription);
             var solution = await _llmService.SolveProblem(request.ProblemDescription, ct);
-            return Ok(new SolveProblemResponse { Solution = solution });
+            return Ok(new SolveProblemResponseDto(solution));
         }
         catch (Exception ex)
         {
@@ -45,11 +46,11 @@ public class LlmController : ControllerBase
     /// Извлекает финальный ответ из готового решения задачи
     /// </summary>
     [HttpPost("extract-answer")]
-    public async Task<IActionResult> ExtractAnswer([FromBody] ExtractAnswerRequest request, CancellationToken ct)
+    public async Task<IActionResult> ExtractAnswer([FromBody] ExtractAnswerRequestDto request, CancellationToken ct)
     {
-        _logger.LogInformation("ExtractAnswer called with ProblemStatement length: {ProblemStatementLength}, Solution length: {SolutionLength}", 
+        _logger.LogInformation("ExtractAnswer called with ProblemStatement length: {ProblemStatementLength}, Solution length: {SolutionLength}",
             request.ProblemStatement?.Length ?? 0, request.Solution?.Length ?? 0);
-        
+
         if (string.IsNullOrWhiteSpace(request.ProblemStatement))
         {
             _logger.LogWarning("ExtractAnswer: Problem statement is empty");
@@ -64,42 +65,21 @@ public class LlmController : ControllerBase
 
         try
         {
-            _logger.LogInformation("Extracting answer from solution for problem. ProblemStatement preview: {ProblemPreview}", 
+            _logger.LogInformation("Extracting answer from solution for problem. ProblemStatement preview: {ProblemPreview}",
                 request.ProblemStatement.Substring(0, Math.Min(100, request.ProblemStatement.Length)));
-            _logger.LogInformation("Solution preview: {SolutionPreview}", 
+            _logger.LogInformation("Solution preview: {SolutionPreview}",
                 request.Solution.Substring(0, Math.Min(200, request.Solution.Length)));
-                
+
             var extractedAnswer = await _llmService.ExtractAnswer(request.ProblemStatement, request.Solution, ct);
-            
+
             _logger.LogInformation("Successfully extracted answer: {ExtractedAnswer}", extractedAnswer);
-            return Ok(new ExtractAnswerResponse { ExtractedAnswer = extractedAnswer });
+            return Ok(new ExtractAnswerResponseDto(extractedAnswer));
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error extracting answer from solution. Exception type: {ExceptionType}, Message: {ExceptionMessage}", 
+            _logger.LogError(ex, "Error extracting answer from solution. Exception type: {ExceptionType}, Message: {ExceptionMessage}",
                 ex.GetType().Name, ex.Message);
             return StatusCode(500, "Error extracting answer: " + ex.Message);
         }
     }
 }
-
-public class SolveProblemRequest
-{
-    public string ProblemDescription { get; set; } = "";
-}
-
-public class SolveProblemResponse
-{
-    public string Solution { get; set; } = "";
-}
-
-public class ExtractAnswerRequest
-{
-    public string ProblemStatement { get; set; } = "";
-    public string Solution { get; set; } = "";
-}
-
-public class ExtractAnswerResponse
-{
-    public string ExtractedAnswer { get; set; } = "";
-} 

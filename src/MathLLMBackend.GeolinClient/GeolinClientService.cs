@@ -1,4 +1,3 @@
-using MathLLMBackend.GeolinClient.HttpMessageHandlers;
 using MathLLMBackend.GeolinClient.Options;
 using Microsoft.Extensions.DependencyInjection;
 using Refit;

@@ -9,4 +9,4 @@ public record UserTaskDto(
     int TaskType,
     UserTaskStatus Status,
     Guid? AssociatedChatId
-); 
+);

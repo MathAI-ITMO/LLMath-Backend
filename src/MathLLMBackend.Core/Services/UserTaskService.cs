@@ -1,12 +1,9 @@
-using MathLLMBackend.Core.Configuration;
 using MathLLMBackend.DataAccess.Contexts;
 using MathLLMBackend.Domain.Entities;
 using MathLLMBackend.Domain.Enums;
 using MathLLMBackend.Core.Dtos;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
-using MathLLMBackend.ProblemsClient.Models;
 using MathLLMBackend.Core.Services.ProblemsService;
 using Microsoft.Extensions.Configuration;
 
@@ -76,14 +73,14 @@ public class UserTaskService : IUserTaskService
                 .FirstOrDefaultAsync(ut => ut.ApplicationUserId == userId
                     && ut.ProblemHash == problemFromDb.Id
                     && ut.TaskType == taskType, cancellationToken);
-            
+
             if (existingUserTask != null)
-                    {
+            {
                 // Если UserTask уже есть, просто используем его
                 newOrExistingUserTasks.Add(MapToDto(existingUserTask));
-                    }
-                    else
-                    {
+            }
+            else
+            {
                 // Если UserTask нет, создаем новый
                 var newTask = new UserTask
                 {
@@ -101,9 +98,9 @@ public class UserTaskService : IUserTaskService
                 newOrExistingUserTasks.Add(MapToDto(newTask)); // Добавляем DTO нового UserTask
             }
         }
-        
+
         // Сохраняем все новые UserTask, созданные в этом цикле
-            await _context.SaveChangesAsync(cancellationToken);
+        await _context.SaveChangesAsync(cancellationToken);
 
         _logger.LogInformation("Returning {Count} UserTasks based on LLMath-Problems DB for user {UserId}", newOrExistingUserTasks.Count, userId);
         return newOrExistingUserTasks.OrderBy(ut => ut.DisplayName);
@@ -125,14 +122,14 @@ public class UserTaskService : IUserTaskService
             _logger.LogInformation("Task {UserTaskId} is already in progress with chat {ChatId}.", userTaskId, chatId);
             return MapToDto(userTask); // Задача уже в нужном состоянии
         }
-        
+
         if (userTask.AssociatedChatId != null && userTask.AssociatedChatId != chatId)
         {
-             _logger.LogWarning("Task {UserTaskId} is already associated with a different chat {ExistingChatId}. Cannot associate with new chat {NewChatId}.", 
-                userTaskId, userTask.AssociatedChatId, chatId);
+            _logger.LogWarning("Task {UserTaskId} is already associated with a different chat {ExistingChatId}. Cannot associate with new chat {NewChatId}.",
+               userTaskId, userTask.AssociatedChatId, chatId);
             // Возможно, здесь стоит вернуть ошибку или текущее состояние?
             // Пока возвращаем null, сигнализируя о проблеме.
-            return null; 
+            return null;
         }
 
         userTask.Status = UserTaskStatus.InProgress;
@@ -150,7 +147,7 @@ public class UserTaskService : IUserTaskService
     {
         var userTask = await _context.UserTasks
             .FirstOrDefaultAsync(ut => ut.Id == userTaskId && ut.ApplicationUserId == userId, cancellationToken);
-        
+
         if (userTask == null)
         {
             _logger.LogWarning("UserTask with ID {UserTaskId} not found for user {UserId} in GetUserTaskByIdAsync.", userTaskId, userId);
@@ -196,31 +193,4 @@ public class UserTaskService : IUserTaskService
             task.AssociatedChatId
         );
     }
-
-    // Метод GetDefaultTaskIds больше не нужен, можно его удалить или закомментировать.
-    private List<string>? GetDefaultTaskIds(int taskType)
-    {
-        return null; // Больше не используется
-        /* switch (taskType)
-        {
-            0 => _defaultTasksOptions.Type0,
-            1 => _defaultTasksOptions.Type1,
-            2 => _defaultTasksOptions.Type2,
-            3 => _defaultTasksOptions.Type3,
-            _ => null 
-        };*/
-    }
-    
-    // Возможно, потребуется аналог функции с фронтенда
-    /*
-    private string ExtractFinalIdentifier(string idLikeString)
-    {
-      if (idLikeString.Contains('.'))
-      {
-        var parts = idLikeString.Split('.');
-        return parts[^1]; // Используем ^1 для последнего элемента
-      }
-      return idLikeString;
-    }
-    */
-} 
+}

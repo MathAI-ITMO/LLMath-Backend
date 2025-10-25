@@ -24,8 +24,8 @@ try
 {
     // Устанавливаем минимальное количество рабочих потоков и потоков завершения IOCP
     // Значения подбираются экспериментально. Например:
-    int minWorkerThreads = 100; 
-    int minCompletionPortThreads = 100; 
+    int minWorkerThreads = 100;
+    int minCompletionPortThreads = 100;
     ThreadPool.SetMinThreads(minWorkerThreads, minCompletionPortThreads);
 
     var builder = WebApplication.CreateBuilder(args);
@@ -57,27 +57,27 @@ try
     GeolinClientRegistrar.Configure(builder.Services, configuration.GetSection(nameof(GeolinClientOptions)).Bind);
     ProblemsClientRegistrar.Configure(builder.Services, configuration.GetSection(nameof(ProblemsClientOptions)).Bind);
     DataAccessRegistrar.Configure(builder.Services, configuration);
-    
+
     builder.Services.AddIdentityApiEndpoints<ApplicationUser>(options =>
     {
         options.User.RequireUniqueEmail = true;
         options.SignIn.RequireConfirmedEmail = false;
     })
         .AddEntityFrameworkStores<AppDbContext>();
-    
+
     builder.Services.AddAuthorization();
 
     builder.Services.AddControllers();
     builder.Services.AddEndpointsApiExplorer();
-    
+
     builder.Services.ConfigureApplicationCookie(options =>
     {
         options.Cookie.HttpOnly = true;
         options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
     });
-    
-    
-    
+
+
+
     builder.Services.AddSwaggerGen(c =>
         {
             var openApiSecurityScheme = new OpenApiSecurityScheme()

@@ -25,4 +25,4 @@ public interface IProblemsAPI
 
     [Get("/api/get_problems_by_type")]
     Task<List<Problem>> GetProblemsByType([AliasAs("problem_type")] string typeName);
-} 
+}

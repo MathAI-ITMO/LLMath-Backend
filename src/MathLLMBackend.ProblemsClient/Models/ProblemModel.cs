@@ -13,13 +13,13 @@ public class ProblemStep
     public int Order { get; set; }
 
     [JsonPropertyName("prerequisites")]
-    public AdditionalProperty Prerequisites {get; set;} = new();
+    public AdditionalProperty Prerequisites { get; set; } = new();
 
     [JsonPropertyName("transition")]
-    public AdditionalProperty Transition {get; set;} = new();
+    public AdditionalProperty Transition { get; set; } = new();
 
     [JsonPropertyName("outcomes")]
-    public AdditionalProperty Outcomes {get; set;} = new();
+    public AdditionalProperty Outcomes { get; set; } = new();
 }
 
 public class GeolinKey
