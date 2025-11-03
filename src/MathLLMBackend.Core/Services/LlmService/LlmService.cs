@@ -1,6 +1,5 @@
 using System.ClientModel;
 using MathLLMBackend.Core.Configuration;
-using MathLLMBackend.Core.Services.PromptService;
 using MathLLMBackend.Domain.Entities;
 using MathLLMBackend.Domain.Enums;
 using Microsoft.Extensions.Logging;
@@ -15,16 +14,16 @@ namespace MathLLMBackend.Core.Services.LlmService;
 public class LlmService : ILlmService
 {
     private readonly IOptions<LlmServiceConfiguration> _config;
-    private readonly IPromptService _promptService;
+    private readonly IOptions<PromptConfiguration> _prompts;
     private readonly ILogger<LlmService> _logger;
 
     public LlmService(
         IOptions<LlmServiceConfiguration> config,
-        IPromptService promptService,
+        IOptions<PromptConfiguration> prompts,
         ILogger<LlmService> logger)
     {
         _config = config;
-        _promptService = promptService;
+        _prompts = prompts;
         _logger = logger;
     }
 
@@ -74,8 +73,8 @@ public class LlmService : ILlmService
             credential: new ApiKeyCredential(config.Token),
             options: new OpenAIClientOptions() { Endpoint = new Uri(config.Url) });
 
-        var solverSystemPrompt = _promptService.GetSolverSystemPrompt();
-        var solverTaskPrompt = _promptService.GetSolverTaskPrompt(problemDescription);
+        var solverSystemPrompt = _prompts.Value.SolverSystemPrompt;
+        var solverTaskPrompt = _prompts.Value.SolverTaskPrompt.Replace("{problem}", problemDescription);
 
         var openaiMessages = new ChatMessage[]
             {
@@ -127,8 +126,10 @@ public class LlmService : ILlmService
             credential: new ApiKeyCredential(config.Token),
             options: new OpenAIClientOptions() { Endpoint = new Uri(config.Url) });
 
-        var extractAnswerSystemPrompt = _promptService.GetExtractAnswerSystemPrompt();
-        var extractAnswerPrompt = _promptService.GetExtractAnswerPrompt(problemStatement, solution);
+        var extractAnswerSystemPrompt = _prompts.Value.ExtractAnswerSystemPrompt;
+        var extractAnswerPrompt = _prompts.Value.ExtractAnswerPrompt
+            .Replace("{problemStatement}", problemStatement)
+            .Replace("{solution}", solution);
 
         var openaiMessages = new ChatMessage[]
             {

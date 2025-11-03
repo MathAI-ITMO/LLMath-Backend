@@ -1,7 +1,6 @@
 using System.Text;
 using MathLLMBackend.Core.Configuration;
 using MathLLMBackend.Core.Services.LlmService;
-using MathLLMBackend.Core.Services.PromptService;
 using MathLLMBackend.DataAccess.Contexts;
 using MathLLMBackend.Domain.Entities;
 using MathLLMBackend.Domain.Enums;
@@ -22,7 +21,7 @@ public class ChatService : IChatService
     private readonly AppDbContext _dbContext;
     private readonly ILlmService _llmService;
     private readonly IProblemsService _problemsService;
-    private readonly IPromptService _promptService;
+    private readonly IOptions<PromptConfiguration> _prompts;
     private readonly IOptions<LlmServiceConfiguration> _llmConfig;
     private readonly ILogger<ChatService> _logger;
 
@@ -30,14 +29,14 @@ public class ChatService : IChatService
         AppDbContext dbContext,
         ILlmService llmService,
         IProblemsService problemsService,
-        IPromptService promptService,
+        IOptions<PromptConfiguration> prompts,
         IOptions<LlmServiceConfiguration> llmConfig,
         ILogger<ChatService> logger)
     {
         _dbContext = dbContext;
         _llmService = llmService;
         _problemsService = problemsService;
-        _promptService = promptService;
+        _prompts = prompts;
         _llmConfig = llmConfig;
         _logger = logger;
     }
@@ -49,7 +48,7 @@ public class ChatService : IChatService
         await _dbContext.Messages.AddAsync(
             new Message(
                 res.Entity,
-                _promptService.GetDefaultSystemPrompt(),
+                _prompts.Value.DefaultSystemPrompt,
                 MessageType.System)
             , ct);
 
@@ -100,7 +99,7 @@ public class ChatService : IChatService
         var newChatEntity = addedChatEntityEntry.Entity;
 
         int taskTypeToUse = explicitTaskType;
-        string systemPromptText = _promptService.GetSystemPromptByTaskType(taskTypeToUse);
+        string systemPromptText = GetSystemPromptByTaskType(taskTypeToUse);
 
         var userTask = await _dbContext.UserTasks
             .FirstOrDefaultAsync(ut => ut.ProblemHash == problemDbId &&
@@ -116,7 +115,7 @@ public class ChatService : IChatService
         Message? solutionMessageForLlm = null;
         if (taskTypeToUse != 3 && !string.IsNullOrWhiteSpace(llmSolution)) // Не для режима Экзамена и если решение есть
         {
-            var tutorSolutionText = _promptService.GetTutorSolutionPrompt(llmSolution); // Передаем готовое решение LLM
+            var tutorSolutionText = _prompts.Value.TutorSolutionPrompt.Replace("{solution}", llmSolution); // Передаем готовое решение LLM
             solutionMessageForLlm = new Message(newChatEntity, tutorSolutionText, MessageType.User, isSystemPrompt: true);
         }
 
@@ -139,7 +138,7 @@ public class ChatService : IChatService
 
         await _dbContext.SaveChangesAsync(ct);
 
-        var initialPromptForLlm = _promptService.GetInitialPromptByTaskType(taskTypeToUse, problemCondition, "");
+        var initialPromptForLlm = GetInitialPromptByTaskType(taskTypeToUse, problemCondition, "");
         var messagesForInitialBotGeneration = new List<Message> { systemMessage };
         if (solutionMessageForLlm != null) messagesForInitialBotGeneration.Add(solutionMessageForLlm);
         // Передаем оригинальное условие задачи LLM для генерации первого сообщения, а не форматированное
@@ -234,16 +233,16 @@ public class ChatService : IChatService
             {
                 taskType = userTask.TaskType;
             }
-            else
-            { // Попытка определить по системному промпту, если UserTask не связан (маловероятно, но для надежности)
+                else
+                { // Попытка определить по системному промпту, если UserTask не связан (маловероятно, но для надежности)
                 var systemMessageInHistory = currentChat.Messages.FirstOrDefault(m => m.MessageType == MessageType.System);
                 if (systemMessageInHistory != null)
                 {
                     // Эти сравнения могут быть не очень надежными, если тексты промптов изменятся.
                     // Лучше иметь явный TaskType, хранящийся с чатом.
-                    if (systemMessageInHistory.Text == _promptService.GetLearningSystemPrompt()) taskType = 1;
-                    else if (systemMessageInHistory.Text == _promptService.GetGuidedSystemPrompt()) taskType = 2;
-                    else if (systemMessageInHistory.Text == _promptService.GetExamSystemPrompt()) taskType = 3;
+                    if (systemMessageInHistory.Text == _prompts.Value.LearningSystemPrompt) taskType = 1;
+                    else if (systemMessageInHistory.Text == _prompts.Value.GuidedSystemPrompt) taskType = 2;
+                    else if (systemMessageInHistory.Text == _prompts.Value.ExamSystemPrompt) taskType = 3;
                     else { _logger.LogWarning("Could not determine taskType from system prompt for chat {ChatId}", currentChat.Id); }
                 }
                 else
@@ -286,5 +285,27 @@ public class ChatService : IChatService
     public async Task<Message?> GetMessageId(Guid id, CancellationToken ct)
     {
         return await _dbContext.Messages.FirstOrDefaultAsync(c => c.Id == id, cancellationToken: ct);
+    }
+
+    private string GetSystemPromptByTaskType(int taskType)
+    {
+        return taskType switch
+        {
+            1 => _prompts.Value.LearningSystemPrompt,
+            2 => _prompts.Value.GuidedSystemPrompt,
+            3 => _prompts.Value.ExamSystemPrompt,
+            _ => _prompts.Value.TutorSystemPrompt
+        };
+    }
+
+    private string GetInitialPromptByTaskType(int taskType, string condition, string firstStep)
+    {
+        return taskType switch
+        {
+            1 => _prompts.Value.LearningInitialPrompt,
+            2 => _prompts.Value.GuidedInitialPrompt,
+            3 => _prompts.Value.ExamInitialPrompt,
+            _ => _prompts.Value.TutorInitialPrompt
+        };
     }
 }

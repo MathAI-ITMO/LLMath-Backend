@@ -1,7 +1,6 @@
 using MathLLMBackend.DataAccess.Contexts;
 using MathLLMBackend.Domain.Entities;
 using MathLLMBackend.Domain.Enums;
-using MathLLMBackend.Core.Dtos;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using MathLLMBackend.Core.Services.ProblemsService;
@@ -29,14 +28,14 @@ public class UserTaskService : IUserTaskService
         _taskModeTitles = configuration.GetSection("TaskModeTitles").Get<Dictionary<string, string>>() ?? new Dictionary<string, string>();
     }
 
-    public async Task<IEnumerable<UserTaskDto>> GetOrCreateUserTasksAsync(string userId, int taskType, CancellationToken cancellationToken = default)
+    public async Task<IEnumerable<UserTask>> GetOrCreateUserTasksAsync(string userId, int taskType, CancellationToken cancellationToken = default)
     {
         // Определяем имя типа задачи по конфигурации
         string? typeName = _taskModeTitles.TryGetValue(taskType.ToString(), out var tn) ? tn : null;
         if (typeName == null)
         {
             _logger.LogWarning("Task type {TaskType} отсутствует в конфигурации TaskModeTitles. Будут возвращены пустые задачи.", taskType);
-            return Enumerable.Empty<UserTaskDto>();
+            return Enumerable.Empty<UserTask>();
         }
 
         _logger.LogInformation("Fetching problems of type '{TypeName}' (taskType={TaskType}) from LLMath-Problems for user {UserId}", typeName, taskType, userId);
@@ -49,16 +48,16 @@ public class UserTaskService : IUserTaskService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error fetching problems of type '{TypeName}' from LLMath-Problems service.", typeName);
-            return Enumerable.Empty<UserTaskDto>();
+            return Enumerable.Empty<UserTask>();
         }
 
         if (problemsFromDb == null || !problemsFromDb.Any())
         {
             _logger.LogInformation("No problems of type '{TypeName}' found in LLMath-Problems database.", typeName);
-            return Enumerable.Empty<UserTaskDto>();
+            return Enumerable.Empty<UserTask>();
         }
 
-        var newOrExistingUserTasks = new List<UserTaskDto>();
+        var newOrExistingUserTasks = new List<UserTask>();
 
         foreach (var problemFromDb in problemsFromDb)
         {
@@ -77,7 +76,7 @@ public class UserTaskService : IUserTaskService
             if (existingUserTask != null)
             {
                 // Если UserTask уже есть, просто используем его
-                newOrExistingUserTasks.Add(MapToDto(existingUserTask));
+                newOrExistingUserTasks.Add(existingUserTask);
             }
             else
             {
@@ -95,7 +94,7 @@ public class UserTaskService : IUserTaskService
                     AssociatedChatId = null
                 };
                 _context.UserTasks.Add(newTask);
-                newOrExistingUserTasks.Add(MapToDto(newTask)); // Добавляем DTO нового UserTask
+                newOrExistingUserTasks.Add(newTask);
             }
         }
 
@@ -106,7 +105,7 @@ public class UserTaskService : IUserTaskService
         return newOrExistingUserTasks.OrderBy(ut => ut.DisplayName);
     }
 
-    public async Task<UserTaskDto?> StartTaskAsync(Guid userTaskId, Guid chatId, string userId, CancellationToken cancellationToken = default)
+    public async Task<UserTask?> StartTaskAsync(Guid userTaskId, Guid chatId, string userId, CancellationToken cancellationToken = default)
     {
         var userTask = await _context.UserTasks
             .FirstOrDefaultAsync(ut => ut.Id == userTaskId && ut.ApplicationUserId == userId, cancellationToken);
@@ -120,7 +119,7 @@ public class UserTaskService : IUserTaskService
         if (userTask.Status == UserTaskStatus.InProgress && userTask.AssociatedChatId == chatId)
         {
             _logger.LogInformation("Task {UserTaskId} is already in progress with chat {ChatId}.", userTaskId, chatId);
-            return MapToDto(userTask); // Задача уже в нужном состоянии
+            return userTask; // Задача уже в нужном состоянии
         }
 
         if (userTask.AssociatedChatId != null && userTask.AssociatedChatId != chatId)
@@ -140,7 +139,7 @@ public class UserTaskService : IUserTaskService
         await _context.SaveChangesAsync(cancellationToken);
         _logger.LogInformation("Task {UserTaskId} status updated to InProgress and associated with chat {ChatId}", userTaskId, chatId);
 
-        return MapToDto(userTask);
+        return userTask;
     }
 
     public async Task<UserTask?> GetUserTaskByIdAsync(Guid userTaskId, string userId, CancellationToken cancellationToken = default)
@@ -156,7 +155,7 @@ public class UserTaskService : IUserTaskService
         return userTask;
     }
 
-    public async Task<UserTaskDto?> CompleteTaskAsync(Guid userTaskId, string userId, CancellationToken cancellationToken = default)
+    public async Task<UserTask?> CompleteTaskAsync(Guid userTaskId, string userId, CancellationToken cancellationToken = default)
     {
         var userTask = await _context.UserTasks
             .FirstOrDefaultAsync(ut => ut.Id == userTaskId && ut.ApplicationUserId == userId, cancellationToken);
@@ -170,7 +169,7 @@ public class UserTaskService : IUserTaskService
         if (userTask.Status == UserTaskStatus.Solved)
         {
             _logger.LogInformation("CompleteTask: Task {UserTaskId} is already marked as solved.", userTaskId);
-            return MapToDto(userTask);
+            return userTask;
         }
 
         userTask.Status = UserTaskStatus.Solved;
@@ -178,19 +177,6 @@ public class UserTaskService : IUserTaskService
         await _context.SaveChangesAsync(cancellationToken);
         _logger.LogInformation("CompleteTask: Task {UserTaskId} marked as solved for user {UserId}", userTaskId, userId);
 
-        return MapToDto(userTask);
-    }
-
-    // Вспомогательный метод для маппинга Entity -> DTO
-    private static UserTaskDto MapToDto(UserTask task)
-    {
-        return new UserTaskDto(
-            task.Id,
-            task.ProblemId,
-            task.DisplayName,
-            task.TaskType,
-            task.Status,
-            task.AssociatedChatId
-        );
+        return userTask;
     }
 }

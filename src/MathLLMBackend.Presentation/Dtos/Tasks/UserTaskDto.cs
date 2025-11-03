@@ -1,6 +1,6 @@
 using MathLLMBackend.Domain.Enums;
 
-namespace MathLLMBackend.Core.Dtos; // Изменено пространство имен
+namespace MathLLMBackend.Presentation.Dtos.Tasks;
 
 public record UserTaskDto(
     Guid Id,
@@ -10,3 +10,4 @@ public record UserTaskDto(
     UserTaskStatus Status,
     Guid? AssociatedChatId
 );
+
