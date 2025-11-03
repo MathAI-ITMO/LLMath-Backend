@@ -1,5 +1,6 @@
 using System.Text;
 using MathLLMBackend.Domain.Entities;
+using MathLLMBackend.Domain.Enums;
 using Microsoft.AspNetCore.Identity;
 
 namespace MathLLMBackend.Core.Services.ChatService;
@@ -7,8 +8,8 @@ namespace MathLLMBackend.Core.Services.ChatService;
 public interface IChatService
 {
     Task<Chat> Create(Chat chat, CancellationToken ct);
-    Task<Chat> Create(Chat chat, string problemHash, int explicitTaskType, CancellationToken ct);
-    Task<Guid> GetOrCreateProblemChatAsync(string problemHash, string userId, string taskDisplayName, int taskType, CancellationToken ct);
+    Task<Chat> Create(Chat chat, string problemHash, TaskType explicitTaskType, CancellationToken ct);
+    Task<Guid> GetOrCreateProblemChatAsync(string problemHash, string userId, string taskDisplayName, TaskType taskType, CancellationToken ct);
     Task Delete(Chat chat, CancellationToken ct);
     Task<List<Chat>> GetUserChats(string userId, CancellationToken ct);
     Task<string> CreateMessage(Message message, CancellationToken ct);

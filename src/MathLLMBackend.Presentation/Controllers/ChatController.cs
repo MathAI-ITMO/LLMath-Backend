@@ -46,7 +46,7 @@ namespace MathLLMBackend.Presentation.Controllers
             }
             else
             {
-                await _chatService.Create(chat, dto.ProblemHash, 0, ct);
+                await _chatService.Create(chat, dto.ProblemHash, TaskType.Tutor, ct);
             }
 
             return Ok(
@@ -80,7 +80,7 @@ namespace MathLLMBackend.Presentation.Controllers
                 return NotFound();
             }
 
-            int? taskType = null;
+            TaskType? taskType = null;
             if (chat.Type == ChatType.ProblemSolver)
             {
                 var userTask = await _context.UserTasks

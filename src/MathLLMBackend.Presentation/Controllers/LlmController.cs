@@ -65,20 +65,12 @@ public class LlmController : ControllerBase
 
         try
         {
-            _logger.LogInformation("Extracting answer from solution for problem. ProblemStatement preview: {ProblemPreview}",
-                request.ProblemStatement.Substring(0, Math.Min(100, request.ProblemStatement.Length)));
-            _logger.LogInformation("Solution preview: {SolutionPreview}",
-                request.Solution.Substring(0, Math.Min(200, request.Solution.Length)));
-
             var extractedAnswer = await _llmService.ExtractAnswer(request.ProblemStatement, request.Solution, ct);
-
-            _logger.LogInformation("Successfully extracted answer: {ExtractedAnswer}", extractedAnswer);
             return Ok(new ExtractAnswerResponseDto(extractedAnswer));
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error extracting answer from solution. Exception type: {ExceptionType}, Message: {ExceptionMessage}",
-                ex.GetType().Name, ex.Message);
+            _logger.LogError(ex, "Error extracting answer from solution");
             return StatusCode(500, "Error extracting answer: " + ex.Message);
         }
     }

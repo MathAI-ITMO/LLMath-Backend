@@ -1,4 +1,5 @@
 using MathLLMBackend.Domain.Entities;
+using MathLLMBackend.Domain.Enums;
 
 namespace MathLLMBackend.Core.Services;
 
@@ -12,7 +13,7 @@ public interface IUserTaskService
     /// <param name="taskType">Тип задач.</param>
     /// <param name="cancellationToken">Токен отмены.</param>
     /// <returns>Список задач пользователя.</returns>
-    Task<IEnumerable<UserTask>> GetOrCreateUserTasksAsync(string userId, int taskType, CancellationToken cancellationToken = default);
+    Task<IEnumerable<UserTask>> GetOrCreateUserTasksAsync(string userId, TaskType taskType, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Обновляет статус задачи пользователя на InProgress и связывает ее с чатом.

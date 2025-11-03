@@ -27,7 +27,7 @@ public class LlmService : ILlmService
         _logger = logger;
     }
 
-    public async IAsyncEnumerable<string> GenerateNextMessageStreaming(List<Message> messages, int taskType, [EnumeratorCancellation] CancellationToken ct)
+    public async IAsyncEnumerable<string> GenerateNextMessageStreaming(List<Message> messages, TaskType taskType, [EnumeratorCancellation] CancellationToken ct)
     {
         var config = _config.Value.ChatModel;
 
@@ -56,11 +56,10 @@ public class LlmService : ILlmService
             {
                 var textChunk = chunk.ContentUpdate[0].Text;
                 fullResponseText.Append(textChunk);
-                _logger.LogInformation("LlmService: Streaming chunk: {textChunk}", textChunk);
+                _logger.LogDebug("Streaming chunk: {TextChunk}", textChunk);
                 yield return textChunk;
             }
         }
-        // Log the full interaction after streaming is complete
         LogInteraction(taskType, messages, fullResponseText.ToString(), config.Model);
     }
 
@@ -90,7 +89,7 @@ public class LlmService : ILlmService
         return solution;
     }
 
-    public async Task<string> GenerateNextMessageAsync(List<Message> messages, int taskType, CancellationToken ct)
+    public async Task<string> GenerateNextMessageAsync(List<Message> messages, TaskType taskType, CancellationToken ct)
     {
         var config = _config.Value.ChatModel;
 
@@ -140,12 +139,12 @@ public class LlmService : ILlmService
         var completion = await client.CompleteChatAsync(openaiMessages, cancellationToken: ct);
         var extractedAnswer = completion!.Value.Content[0].Text;
 
-        _logger.LogInformation("Extracted answer: {ExtractedAnswer}", extractedAnswer);
+        _logger.LogDebug("Extracted answer: {ExtractedAnswer}", extractedAnswer);
 
         return extractedAnswer;
     }
 
-    private void LogInteraction(int taskType, IEnumerable<Message> messages, string response, string modelName)
+    private void LogInteraction(TaskType taskType, IEnumerable<Message> messages, string response, string modelName)
     {
         var taskTypeName = GetTaskTypeName(taskType);
         
@@ -170,15 +169,14 @@ public class LlmService : ILlmService
             modelName, problem, solution);
     }
 
-    private static string GetTaskTypeName(int taskType)
+    private static string GetTaskTypeName(TaskType taskType)
     {
         return taskType switch
         {
-            0 => "Default (Tutor)",
-            1 => "Learning",
-            2 => "Guided",
-            3 => "Exam",
-            _ => $"Unknown ({taskType})"
+            TaskType.Tutor => "Default (Tutor)",
+            TaskType.Learning => "Learning",
+            TaskType.Guided => "Guided",
+            TaskType.Exam => "Exam"
         };
     }
 

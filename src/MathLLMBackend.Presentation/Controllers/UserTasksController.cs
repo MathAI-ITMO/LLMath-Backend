@@ -3,6 +3,7 @@ using MathLLMBackend.Core.Services;
 using MathLLMBackend.Presentation.Dtos.Tasks;
 using MathLLMBackend.Core.Services.ChatService;
 using MathLLMBackend.Domain.Entities;
+using MathLLMBackend.Domain.Enums;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -36,7 +37,7 @@ public class UserTasksController : ControllerBase
     [ProducesResponseType(typeof(IEnumerable<UserTaskDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    public async Task<IActionResult> GetUserTasks([FromQuery] int taskType = 0) // По умолчанию тип 0
+    public async Task<IActionResult> GetUserTasks([FromQuery] TaskType taskType = TaskType.Tutor)
     {
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (string.IsNullOrEmpty(userId))
@@ -54,7 +55,6 @@ public class UserTasksController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error while getting or creating user tasks for user {UserId} and type {TaskType}", userId, taskType);
-            // В зависимости от типа ошибки можно возвращать разные статусы
             return StatusCode(StatusCodes.Status500InternalServerError, "An error occurred while processing your request.");
         }
     }
