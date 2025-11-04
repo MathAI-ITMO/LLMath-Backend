@@ -114,7 +114,7 @@ public class ChatService : IChatService
 
         await _dbContext.SaveChangesAsync(ct);
 
-        var initialPromptForLlm = GetInitialPromptByTaskType(explicitTaskType, problemCondition, "");
+        var initialPromptForLlm = GetInitialPromptByTaskType(explicitTaskType);
         var messagesForInitialBotGeneration = new List<Message> { systemMessage };
         if (solutionMessageForLlm != null) messagesForInitialBotGeneration.Add(solutionMessageForLlm);
         messagesForInitialBotGeneration.Add(new Message(newChatEntity, problemCondition, MessageType.User, isSystemPrompt: true));
@@ -253,7 +253,7 @@ public class ChatService : IChatService
         };
     }
 
-    private string GetInitialPromptByTaskType(TaskType taskType, string condition, string firstStep)
+    private string GetInitialPromptByTaskType(TaskType taskType)
     {
         return taskType switch
         {

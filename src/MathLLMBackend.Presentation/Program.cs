@@ -7,30 +7,17 @@ using MathLLMBackend.ProblemsClient;
 using MathLLMBackend.ProblemsClient.Options;
 using Microsoft.OpenApi.Models;
 using MathLLMBackend.Presentation.Middlewares;
-using Microsoft.AspNetCore.Authentication.Cookies;
-using Microsoft.AspNetCore.CookiePolicy;
 using NLog;
 using NLog.Web;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
 using MathLLMBackend.DataAccess.Contexts;
 using MathLLMBackend.Presentation.Configuration;
 using MathLLMBackend.Domain.Entities;
-using System.Threading;
 
 var logger = LogManager.Setup().LoadConfigurationFromAppSettings().GetCurrentClassLogger();
 
 try
 {
-    // Устанавливаем минимальное количество рабочих потоков и потоков завершения IOCP
-    // Значения подбираются экспериментально. Например:
-    int minWorkerThreads = 100;
-    int minCompletionPortThreads = 100;
-    ThreadPool.SetMinThreads(minWorkerThreads, minCompletionPortThreads);
-
     var builder = WebApplication.CreateBuilder(args);
-    // Загружаем секретные настройки (не фиксированы в репозитории)
-    builder.Configuration.AddJsonFile("appsettings.Secrets.json", optional: true, reloadOnChange: true);
     builder.Services.AddHttpLogging(o => { });
     var configuration = builder.Configuration;
     var corsConfiguration = configuration.GetSection(nameof(CorsConfiguration)).Get<CorsConfiguration>() ?? new CorsConfiguration();

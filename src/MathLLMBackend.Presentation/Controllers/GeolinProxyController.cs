@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace MathLLMBackend.Presentation.Controllers
 {
     [ApiController]
-    [Route("api/v1/[controller]")]
+    [Route("api/v1/geolin-proxy")]
     public class GeolinProxyController : ControllerBase
     {
         private readonly IGeolinService _geolinService;
