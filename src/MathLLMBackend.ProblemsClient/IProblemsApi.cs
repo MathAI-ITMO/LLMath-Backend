@@ -3,7 +3,7 @@ using Refit;
 
 namespace MathLLMBackend.ProblemsClient;
 
-public interface IProblemsAPI
+public interface IProblemsApi
 {
     [Get("/api/problems")]
     Task<List<Problem>> GetProblems();
@@ -25,4 +25,4 @@ public interface IProblemsAPI
 
     [Get("/api/get_problems_by_type")]
     Task<List<Problem>> GetProblemsByType([AliasAs("problem_type")] string typeName);
-} 
+}

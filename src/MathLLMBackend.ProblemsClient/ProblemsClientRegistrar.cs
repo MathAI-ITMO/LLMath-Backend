@@ -11,12 +11,14 @@ public static class ProblemsClientRegistrar
         var config = new ProblemsClientOptions();
         configuration(config);
         services.Configure(configuration)
-        .AddRefitClient<IProblemsAPI>()
-        .ConfigureHttpClient(c => 
+        .AddRefitClient<IProblemsApi>()
+        .ConfigureHttpClient(c =>
         {
             c.BaseAddress = new Uri(config.BaseAddress);
         });
-        
-        return services;        
+
+        return services;
     }
 }
+
+

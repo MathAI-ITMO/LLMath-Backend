@@ -36,7 +36,7 @@ namespace MathLLMBackend.Presentation.Controllers
             {
                 return Unauthorized();
             }
-            
+
             // TODO: refactor move logic to service
             var chat = new Chat(dto.Name, userId);
 
@@ -46,15 +46,15 @@ namespace MathLLMBackend.Presentation.Controllers
             }
             else
             {
-                await _chatService.Create(chat, dto.ProblemHash, 0, ct);
+                await _chatService.Create(chat, dto.ProblemHash, TaskType.Tutor, ct);
             }
-            
+
             return Ok(
                 new ChatDto(chat.Id, chat.Name, chat.Type.ToString(), null)
             );
-            
+
         }
-        
+
         [HttpGet("get")]
         [Authorize]
         public async Task<IActionResult> GetChats(CancellationToken ct)
@@ -64,7 +64,7 @@ namespace MathLLMBackend.Presentation.Controllers
             {
                 return Unauthorized();
             }
-            
+
             var chats = await _chatService.GetUserChats(userId, ct);
             return Ok(chats.Select(c => new ChatDto(c.Id, c.Name, c.Type?.ToString() ?? "Chat", null)).ToList());
         }
@@ -80,7 +80,7 @@ namespace MathLLMBackend.Presentation.Controllers
                 return NotFound();
             }
 
-            int? taskType = null;
+            TaskType? taskType = null;
             if (chat.Type == ChatType.ProblemSolver)
             {
                 var userTask = await _context.UserTasks
@@ -104,21 +104,21 @@ namespace MathLLMBackend.Presentation.Controllers
             {
                 return Unauthorized();
             }
-            
+
             var chat = await _chatService.GetChatById(id, ct);
 
             if (chat is null)
             {
                 return NotFound();
             }
-            
+
             if (chat.User.Id != userId)
             {
                 return Unauthorized();
             }
-            
+
             await _chatService.Delete(chat, ct);
-            
+
             return Ok();
         }
     }

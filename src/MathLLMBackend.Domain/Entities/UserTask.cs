@@ -22,12 +22,8 @@ public class UserTask
     [MaxLength(1024)] // Название для отображения, может быть еще длиннее
     public string DisplayName { get; set; } = null!;
 
-    // Тип задачи, например: 
-    // 0 - Задачи из списка "Выбрать задачу" (инициализируются из TASK_TYPES)
-    // 1 - Случайная задача (если будет такой режим)
-    // 2 - Задачи из контрольной работы и т.д.
     [Required]
-    public int TaskType { get; set; }
+    public TaskType TaskType { get; set; }
 
     [Required]
     public UserTaskStatus Status { get; set; }
@@ -50,4 +46,4 @@ public class UserTask
         // CreatedAt = DateTime.UtcNow;
         // UpdatedAt = DateTime.UtcNow;
     }
-} 
+}

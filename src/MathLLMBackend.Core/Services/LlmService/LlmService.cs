@@ -1,6 +1,5 @@
 using System.ClientModel;
 using MathLLMBackend.Core.Configuration;
-using MathLLMBackend.Core.Services.PromptService;
 using MathLLMBackend.Domain.Entities;
 using MathLLMBackend.Domain.Enums;
 using Microsoft.Extensions.Logging;
@@ -15,23 +14,20 @@ namespace MathLLMBackend.Core.Services.LlmService;
 public class LlmService : ILlmService
 {
     private readonly IOptions<LlmServiceConfiguration> _config;
-    private readonly IPromptService _promptService;
-    private readonly ILlmLoggingService _loggingService;
+    private readonly IOptions<PromptConfiguration> _prompts;
     private readonly ILogger<LlmService> _logger;
 
     public LlmService(
-        IOptions<LlmServiceConfiguration> config, 
-        IPromptService promptService,
-        ILlmLoggingService loggingService,
+        IOptions<LlmServiceConfiguration> config,
+        IOptions<PromptConfiguration> prompts,
         ILogger<LlmService> logger)
     {
         _config = config;
-        _promptService = promptService;
-        _loggingService = loggingService;
+        _prompts = prompts;
         _logger = logger;
     }
-    
-    public async IAsyncEnumerable<string> GenerateNextMessageStreaming(List<Message> messages, int taskType, [EnumeratorCancellation] CancellationToken ct)
+
+    public async IAsyncEnumerable<string> GenerateNextMessageStreaming(List<Message> messages, TaskType taskType, [EnumeratorCancellation] CancellationToken ct)
     {
         var config = _config.Value.ChatModel;
 
@@ -49,7 +45,7 @@ public class LlmService : ILlmService
                 _ => throw new NotImplementedException()
             }
         );
-    
+
         var fullResponseText = new StringBuilder();
         AsyncCollectionResult<StreamingChatCompletionUpdate> completion = client.CompleteChatStreamingAsync(openaiMessages, cancellationToken: ct);
 
@@ -60,12 +56,11 @@ public class LlmService : ILlmService
             {
                 var textChunk = chunk.ContentUpdate[0].Text;
                 fullResponseText.Append(textChunk);
-                _logger.LogInformation("LlmService: Streaming chunk: {textChunk}", textChunk);
+                _logger.LogDebug("Streaming chunk: {TextChunk}", textChunk);
                 yield return textChunk;
+            }
         }
-    }
-        // Log the full interaction after streaming is complete
-        await _loggingService.LogInteraction(taskType, messages, fullResponseText.ToString(), config.Model);
+        LogInteraction(taskType, messages, fullResponseText.ToString(), config.Model);
     }
 
     public async Task<string> SolveProblem(string problemDescription, CancellationToken ct)
@@ -76,25 +71,25 @@ public class LlmService : ILlmService
             model: config.Model,
             credential: new ApiKeyCredential(config.Token),
             options: new OpenAIClientOptions() { Endpoint = new Uri(config.Url) });
-        
-        var solverSystemPrompt = _promptService.GetSolverSystemPrompt();
-        var solverTaskPrompt = _promptService.GetSolverTaskPrompt(problemDescription);
+
+        var solverSystemPrompt = _prompts.Value.SolverSystemPrompt;
+        var solverTaskPrompt = _prompts.Value.SolverTaskPrompt.Replace("{problem}", problemDescription);
 
         var openaiMessages = new ChatMessage[]
             {
                 new SystemChatMessage(solverSystemPrompt),
                 new UserChatMessage(solverTaskPrompt),
             };
-    
+
         var completion = await client.CompleteChatAsync(openaiMessages, cancellationToken: ct);
         var solution = completion!.Value.Content[0].Text;
-        
-        await _loggingService.LogSolution(problemDescription, solution, config.Model);
-        
+
+        LogSolution(problemDescription, solution, config.Model);
+
         return solution;
     }
 
-    public async Task<string> GenerateNextMessageAsync(List<Message> messages, int taskType, CancellationToken ct)
+    public async Task<string> GenerateNextMessageAsync(List<Message> messages, TaskType taskType, CancellationToken ct)
     {
         var config = _config.Value.ChatModel;
 
@@ -112,12 +107,12 @@ public class LlmService : ILlmService
                 _ => throw new NotImplementedException()
             }
         );
-    
+
         var completion = await client.CompleteChatAsync(openaiMessages, cancellationToken: ct);
         var response = completion!.Value.Content[0].Text;
-        
-        await _loggingService.LogInteraction(taskType, messages, response, config.Model);
-        
+
+        LogInteraction(taskType, messages, response, config.Model);
+
         return response;
     }
 
@@ -129,21 +124,69 @@ public class LlmService : ILlmService
             model: config.Model,
             credential: new ApiKeyCredential(config.Token),
             options: new OpenAIClientOptions() { Endpoint = new Uri(config.Url) });
-        
-        var extractAnswerSystemPrompt = _promptService.GetExtractAnswerSystemPrompt();
-        var extractAnswerPrompt = _promptService.GetExtractAnswerPrompt(problemStatement, solution);
+
+        var extractAnswerSystemPrompt = _prompts.Value.ExtractAnswerSystemPrompt;
+        var extractAnswerPrompt = _prompts.Value.ExtractAnswerPrompt
+            .Replace("{problemStatement}", problemStatement)
+            .Replace("{solution}", solution);
 
         var openaiMessages = new ChatMessage[]
             {
                 new SystemChatMessage(extractAnswerSystemPrompt),
                 new UserChatMessage(extractAnswerPrompt),
             };
-    
+
         var completion = await client.CompleteChatAsync(openaiMessages, cancellationToken: ct);
         var extractedAnswer = completion!.Value.Content[0].Text;
-        
-        _logger.LogInformation("Extracted answer: {ExtractedAnswer}", extractedAnswer);
-        
+
+        _logger.LogDebug("Extracted answer: {ExtractedAnswer}", extractedAnswer);
+
         return extractedAnswer;
+    }
+
+    private void LogInteraction(TaskType taskType, IEnumerable<Message> messages, string response, string modelName)
+    {
+        var taskTypeName = GetTaskTypeName(taskType);
+        
+        _logger.LogDebug(
+            "LLM Interaction - Task: {TaskTypeName} ({TaskType}), Model: {Model}, Response: {Response}",
+            taskTypeName, taskType, modelName, response);
+
+        _logger.LogTrace(
+            "LLM Interaction Details - Task: {TaskTypeName} ({TaskType}), Model: {Model}\nMessages:\n{Messages}\nResponse:\n{Response}",
+            taskTypeName, taskType, modelName, 
+            FormatMessages(messages), response);
+    }
+
+    private void LogSolution(string problem, string solution, string modelName)
+    {
+        _logger.LogDebug(
+            "LLM Solution - Model: {Model}, Problem: {Problem}, Solution: {Solution}",
+            modelName, problem, solution);
+
+        _logger.LogTrace(
+            "LLM Solution Details - Model: {Model}\nProblem:\n{Problem}\nSolution:\n{Solution}",
+            modelName, problem, solution);
+    }
+
+    private static string GetTaskTypeName(TaskType taskType)
+    {
+        return taskType switch
+        {
+            TaskType.Tutor => "Default (Tutor)",
+            TaskType.Learning => "Learning",
+            TaskType.Guided => "Guided",
+            TaskType.Exam => "Exam"
+        };
+    }
+
+    private static string FormatMessages(IEnumerable<Message> messages)
+    {
+        var sb = new StringBuilder();
+        foreach (var message in messages)
+        {
+            sb.AppendLine($"[{message.MessageType}] {(message.IsSystemPrompt ? "(SYSTEM)" : "")} {message.Text}");
+        }
+        return sb.ToString();
     }
 }

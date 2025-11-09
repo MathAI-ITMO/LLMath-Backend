@@ -36,7 +36,7 @@ namespace MathLLMBackend.Presentation.Controllers
             if (existingUser != null)
             {
                 ModelState.AddModelError("", "Пользователь с таким email уже существует");
-                return BadRequest(new 
+                return BadRequest(new
                 {
                     errors = new Dictionary<string, string[]>
                     {
@@ -47,7 +47,7 @@ namespace MathLLMBackend.Presentation.Controllers
                     detail = "Пользователь с таким email уже существует"
                 });
             }
-            
+
             var user = new ApplicationUser
             {
                 UserName = registerDto.Email,
@@ -71,12 +71,12 @@ namespace MathLLMBackend.Presentation.Controllers
             }
 
             var errors = new Dictionary<string, List<string>>();
-            
+
             foreach (var error in result.Errors)
             {
                 string errorKey = error.Code;
                 string errorMessage;
-                
+
                 if (error.Code == "DuplicateUserName" || error.Code == "DuplicateEmail")
                 {
                     errorMessage = "Пользователь с таким email уже существует";
@@ -89,16 +89,16 @@ namespace MathLLMBackend.Presentation.Controllers
                 {
                     errorMessage = error.Description;
                 }
-                
+
                 if (!errors.ContainsKey(errorKey))
                 {
                     errors[errorKey] = new List<string>();
                 }
-                
+
                 errors[errorKey].Add(errorMessage);
             }
-            
-            return BadRequest(new 
+
+            return BadRequest(new
             {
                 errors = errors.ToDictionary(kvp => kvp.Key, kvp => kvp.Value.ToArray()),
                 title = "Ошибка регистрации",
@@ -107,4 +107,4 @@ namespace MathLLMBackend.Presentation.Controllers
             });
         }
     }
-} 
+}

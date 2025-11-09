@@ -1,7 +1,9 @@
 using System.Security.Claims;
 using MathLLMBackend.Core.Services;
-using MathLLMBackend.Core.Dtos;
+using MathLLMBackend.Presentation.Dtos.Tasks;
 using MathLLMBackend.Core.Services.ChatService;
+using MathLLMBackend.Domain.Entities;
+using MathLLMBackend.Domain.Enums;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -17,7 +19,7 @@ public class UserTasksController : ControllerBase
     private readonly ILogger<UserTasksController> _logger;
 
     public UserTasksController(
-        IUserTaskService userTaskService, 
+        IUserTaskService userTaskService,
         IChatService chatService,
         ILogger<UserTasksController> logger)
     {
@@ -35,7 +37,7 @@ public class UserTasksController : ControllerBase
     [ProducesResponseType(typeof(IEnumerable<UserTaskDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    public async Task<IActionResult> GetUserTasks([FromQuery] int taskType = 0) // По умолчанию тип 0
+    public async Task<IActionResult> GetUserTasks([FromQuery] TaskType taskType = TaskType.Tutor)
     {
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (string.IsNullOrEmpty(userId))
@@ -47,12 +49,12 @@ public class UserTasksController : ControllerBase
         try
         {
             var tasks = await _userTaskService.GetOrCreateUserTasksAsync(userId, taskType, HttpContext.RequestAborted);
-            return Ok(tasks);
+            var dtos = tasks.Select(MapToDto);
+            return Ok(dtos);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error while getting or creating user tasks for user {UserId} and type {TaskType}", userId, taskType);
-            // В зависимости от типа ошибки можно возвращать разные статусы
             return StatusCode(StatusCodes.Status500InternalServerError, "An error occurred while processing your request.");
         }
     }
@@ -85,21 +87,21 @@ public class UserTasksController : ControllerBase
                 _logger.LogWarning("StartTask: UserTask with ID {UserTaskId} not found for user {UserId}", userTaskId, userId);
                 return NotFound("Task not found or you don't have permission.");
             }
-            
+
             // Проверка, если чат уже связан (на всякий случай, хотя фронтенд не должен вызывать start для таких)
             if (userTask.AssociatedChatId.HasValue && userTask.AssociatedChatId != Guid.Empty)
             {
-                 _logger.LogInformation("StartTask: Task {UserTaskId} already associated with chat {ChatId}. Returning current state.", userTaskId, userTask.AssociatedChatId);
-                 var currentDto = await _userTaskService.StartTaskAsync(userTaskId, userTask.AssociatedChatId.Value, userId, HttpContext.RequestAborted);
-                 if (currentDto == null)
-                 {
+                _logger.LogInformation("StartTask: Task {UserTaskId} already associated with chat {ChatId}. Returning current state.", userTaskId, userTask.AssociatedChatId);
+                var currentTask = await _userTaskService.StartTaskAsync(userTaskId, userTask.AssociatedChatId.Value, userId, HttpContext.RequestAborted);
+                if (currentTask == null)
+                {
                     // Этого не должно происходить, если задача действительно уже была правильно начата.
                     // Указывает на несоответствие или проблему в UserTaskService.StartTaskAsync при обработке уже начатых задач.
-                    _logger.LogError("StartTask: Failed to re-confirm task {UserTaskId} which was already associated with chat {ChatId}. UserTaskService.StartTaskAsync returned null.", 
+                    _logger.LogError("StartTask: Failed to re-confirm task {UserTaskId} which was already associated with chat {ChatId}. UserTaskService.StartTaskAsync returned null.",
                         userTaskId, userTask.AssociatedChatId.Value);
                     return StatusCode(StatusCodes.Status500InternalServerError, "Failed to confirm an already started task. Please try again or contact support.");
-                 }
-                 return Ok(currentDto);
+                }
+                return Ok(MapToDto(currentTask));
             }
 
             // 2. Создаем или получаем чат для этой задачи
@@ -110,39 +112,39 @@ public class UserTasksController : ControllerBase
             }
             catch (Exception chatEx)
             {
-                 _logger.LogError(chatEx, "Failed to create or get chat for task {UserTaskId} (ProblemHash: {ProblemHash}) for user {UserId}", 
-                    userTaskId, userTask.ProblemHash, userId);
-                 return StatusCode(StatusCodes.Status500InternalServerError, "Failed to create or retrieve the associated chat.");
+                _logger.LogError(chatEx, "Failed to create or get chat for task {UserTaskId} (ProblemHash: {ProblemHash}) for user {UserId}",
+                   userTaskId, userTask.ProblemHash, userId);
+                return StatusCode(StatusCodes.Status500InternalServerError, "Failed to create or retrieve the associated chat.");
             }
 
             if (chatId == Guid.Empty)
-            { 
-                _logger.LogError("ChatService returned an empty GUID for task {UserTaskId} (ProblemHash: {ProblemHash}) for user {UserId}", 
+            {
+                _logger.LogError("ChatService returned an empty GUID for task {UserTaskId} (ProblemHash: {ProblemHash}) for user {UserId}",
                     userTaskId, userTask.ProblemHash, userId);
-                 return StatusCode(StatusCodes.Status500InternalServerError, "Failed to obtain a valid chat ID.");
+                return StatusCode(StatusCodes.Status500InternalServerError, "Failed to obtain a valid chat ID.");
             }
-            
+
             // 3. Обновляем статус UserTask и сохраняем chatId
-            var updatedTaskDto = await _userTaskService.StartTaskAsync(userTaskId, chatId, userId, HttpContext.RequestAborted);
-            
-            if (updatedTaskDto == null)
+            var updatedTask = await _userTaskService.StartTaskAsync(userTaskId, chatId, userId, HttpContext.RequestAborted);
+
+            if (updatedTask == null)
             {
                 // Эта ветка теперь менее вероятна, т.к. основные проверки были выше
-                _logger.LogWarning("Failed to update UserTask {UserTaskId} status after obtaining chat ID {ChatId} for user {UserId}.", 
+                _logger.LogWarning("Failed to update UserTask {UserTaskId} status after obtaining chat ID {ChatId} for user {UserId}.",
                     userTaskId, chatId, userId);
                 // Возможно, проблема с сохранением в StartTaskAsync?
-                return NotFound("Task found and chat obtained, but failed to update task status."); 
+                return NotFound("Task found and chat obtained, but failed to update task status.");
             }
-            
-            // Убедимся, что возвращенный DTO содержит правильный chatId
-            if (updatedTaskDto.AssociatedChatId != chatId)
+
+            // Убедимся, что возвращенная задача содержит правильный chatId
+            if (updatedTask.AssociatedChatId != chatId)
             {
-                 _logger.LogError("Mismatch! updatedTaskDto.AssociatedChatId ({DtoChatId}) != obtained chatId ({ChatId}) for UserTask {UserTaskId}", 
-                    updatedTaskDto.AssociatedChatId, chatId, userTaskId);
-                 // Возвращаем то, что получили, но логируем серьезную ошибку
+                _logger.LogError("Mismatch! updatedTask.AssociatedChatId ({DtoChatId}) != obtained chatId ({ChatId}) for UserTask {UserTaskId}",
+                   updatedTask.AssociatedChatId, chatId, userTaskId);
+                // Возвращаем то, что получили, но логируем серьезную ошибку
             }
-            
-            return Ok(updatedTaskDto);
+
+            return Ok(MapToDto(updatedTask));
         }
         catch (Exception ex)
         {
@@ -166,11 +168,23 @@ public class UserTasksController : ControllerBase
             return Unauthorized();
         }
 
-        var completedDto = await _userTaskService.CompleteTaskAsync(userTaskId, userId, HttpContext.RequestAborted);
-        if (completedDto == null)
+        var completedTask = await _userTaskService.CompleteTaskAsync(userTaskId, userId, HttpContext.RequestAborted);
+        if (completedTask == null)
         {
             return NotFound();
         }
-        return Ok(completedDto);
+        return Ok(MapToDto(completedTask));
     }
-} 
+
+    private static UserTaskDto MapToDto(UserTask task)
+    {
+        return new UserTaskDto(
+            task.Id,
+            task.ProblemId,
+            task.DisplayName,
+            task.TaskType,
+            task.Status,
+            task.AssociatedChatId
+        );
+    }
+}

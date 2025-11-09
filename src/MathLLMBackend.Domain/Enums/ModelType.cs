@@ -4,4 +4,4 @@ public enum ModelType
 {
     Chat,
     Solver
-} 
+}
