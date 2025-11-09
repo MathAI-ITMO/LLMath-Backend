@@ -7,7 +7,3 @@ public record GetProblemDataResponseDto(
     int Seed,
     string ProblemParams
 );
-
-public record GetProblemDataErrorResponseDto(
-    string Error
-);

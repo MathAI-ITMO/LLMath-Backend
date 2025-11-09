@@ -1,13 +1,9 @@
-using System.Text;
 using MathLLMBackend.Core.Configuration;
 using MathLLMBackend.Core.Services.LlmService;
 using MathLLMBackend.DataAccess.Contexts;
 using MathLLMBackend.Domain.Entities;
 using MathLLMBackend.Domain.Enums;
-using MathLLMBackend.GeolinClient;
-using MathLLMBackend.GeolinClient.Models;
 using MathLLMBackend.Core.Services.ProblemsService;
-using MathLLMBackend.ProblemsClient.Models;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;

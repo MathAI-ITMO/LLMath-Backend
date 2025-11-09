@@ -11,7 +11,7 @@ public static class ProblemsClientRegistrar
         var config = new ProblemsClientOptions();
         configuration(config);
         services.Configure(configuration)
-        .AddRefitClient<IProblemsAPI>()
+        .AddRefitClient<IProblemsApi>()
         .ConfigureHttpClient(c =>
         {
             c.BaseAddress = new Uri(config.BaseAddress);
@@ -20,3 +20,5 @@ public static class ProblemsClientRegistrar
         return services;
     }
 }
+
+
