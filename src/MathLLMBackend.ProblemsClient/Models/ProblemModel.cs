@@ -59,4 +59,7 @@ public class Problem
 
     [JsonPropertyName("solution")]
     public Solution Solution { get; set; } = new();
+
+    [JsonPropertyName("theory_link")]
+    public string? TheoryLink { get; set; }
 }
