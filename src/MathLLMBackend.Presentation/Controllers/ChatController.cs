@@ -1,4 +1,5 @@
 using MathLLMBackend.Core.Services.ChatService;
+using MathLLMBackend.Core.Services.ProblemsService;
 using MathLLMBackend.Domain.Entities;
 using MathLLMBackend.Domain.Enums;
 using Microsoft.AspNetCore.Mvc;
@@ -50,7 +51,7 @@ namespace MathLLMBackend.Presentation.Controllers
             }
             
             return Ok(
-                new ChatDto(chat.Id, chat.Name, chat.Type.ToString(), null)
+                new ChatDto(chat.Id, chat.Name, chat.Type.ToString(), null, null)
             );
             
         }
@@ -66,7 +67,7 @@ namespace MathLLMBackend.Presentation.Controllers
             }
             
             var chats = await _chatService.GetUserChats(userId, ct);
-            return Ok(chats.Select(c => new ChatDto(c.Id, c.Name, c.Type?.ToString() ?? "Chat", null)).ToList());
+            return Ok(chats.Select(c => new ChatDto(c.Id, c.Name, c.Type?.ToString() ?? "Chat", null, null)).ToList());
         }
 
         [HttpGet("get/{chatId:guid}")]
@@ -81,6 +82,7 @@ namespace MathLLMBackend.Presentation.Controllers
             }
 
             int? taskType = null;
+            string? theoryLink = null;
             if (chat.Type == ChatType.ProblemSolver)
             {
                 var userTask = await _context.UserTasks
@@ -89,10 +91,21 @@ namespace MathLLMBackend.Presentation.Controllers
                 if (userTask != null)
                 {
                     taskType = userTask.TaskType;
+                    // Get theory link from problem
+                    try
+                    {
+                        var problemsService = HttpContext.RequestServices.GetRequiredService<IProblemsService>();
+                        var problem = await problemsService.GetProblemFromDbAsync(userTask.ProblemId, ct);
+                        theoryLink = problem?.TheoryLink;
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "Failed to get theory link for problem {ProblemId}", userTask.ProblemId);
+                    }
                 }
             }
 
-            return Ok(new ChatDto(chat.Id, chat.Name, chat.Type?.ToString() ?? "Chat", taskType));
+            return Ok(new ChatDto(chat.Id, chat.Name, chat.Type?.ToString() ?? "Chat", taskType, theoryLink));
         }
 
         [HttpPost("delete/{id}")]

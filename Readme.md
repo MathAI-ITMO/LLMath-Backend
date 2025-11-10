@@ -10,7 +10,7 @@ docker compose up -d
 dotnet tool install --global dotnet-ef
 ```
 3. Накатить миграции
-``` sh
+``` shReadme.md
 $env:ASPNETCORE_ENVIRONMENT = "Development"
 dotnet ef database update --project src/MathLLMBackend.DataAccess --startup-project src/MathLLMBackend.Presentation
 ```
