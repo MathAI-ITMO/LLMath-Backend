@@ -29,10 +29,10 @@ jobs:
       run: dotnet build --no-restore --configuration Release
       
     - name: Run Unit Tests
-      run: dotnet test tests/MathLLMBackend.Tests/MathLLMBackend.Tests.csproj --no-build --configuration Release --verbosity normal --collect:"XPlat Code Coverage" --results-directory:"${{ runner.temp }}/test-results" --logger:"trx;LogFileName=unit-tests.trx"
+      run: dotnet test tests/MathLLMBackend.Tests/MathLLMBackend.Tests.csproj --configuration Release --verbosity normal --collect:"XPlat Code Coverage" --results-directory:"${{ runner.temp }}/test-results" --logger:"trx;LogFileName=unit-tests.trx" --no-restore
       
     - name: Run Integration Tests
-      run: dotnet test tests/MathLLMBackend.IntegrationTests/MathLLMBackend.IntegrationTests.csproj --no-build --configuration Release --verbosity normal --collect:"XPlat Code Coverage" --results-directory:"${{ runner.temp }}/test-results" --logger:"trx;LogFileName=integration-tests.trx"
+      run: dotnet test tests/MathLLMBackend.IntegrationTests/MathLLMBackend.IntegrationTests.csproj --configuration Release --verbosity normal --collect:"XPlat Code Coverage" --results-directory:"${{ runner.temp }}/test-results" --logger:"trx;LogFileName=integration-tests.trx" --no-restore
       
     - name: Publish Test Results
       uses: EnricoMi/publish-unit-test-result-action@v2
