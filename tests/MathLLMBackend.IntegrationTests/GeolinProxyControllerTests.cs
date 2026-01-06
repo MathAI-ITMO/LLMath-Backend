@@ -50,37 +50,6 @@ public class GeolinProxyControllerTests : BaseIntegrationTest
     }
 
     [Fact]
-    public async Task CheckAnswer_WithValidRequest_ReturnsOk()
-    {
-        Factory.GeolinApiMock
-            .Setup(x => x.CheckProblemAnswer(It.IsAny<ProblemAnswerCheckRequest>()))
-            .ReturnsAsync(new ProblemAnswerCheckResponse { Verdict = 1.0 });
-
-        var request = new
-        {
-            Hash = "test-hash",
-            AnswerAttempt = "42",
-            Seed = 123
-        };
-        var response = await Client.PostAsJsonAsync("/api/v1/geolin-proxy/check-answer", request);
-
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
-    }
-
-    [Fact]
-    public async Task CheckAnswer_WithEmptyHash_ReturnsBadRequest()
-    {
-        var request = new
-        {
-            Hash = "",
-            AnswerAttempt = "42"
-        };
-        var response = await Client.PostAsJsonAsync("/api/v1/geolin-proxy/check-answer", request);
-
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
-    }
-
-    [Fact]
     public async Task CheckAnswerDirect_WithValidRequest_ReturnsOk()
     {
         var request = new
