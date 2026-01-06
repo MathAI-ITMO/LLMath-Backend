@@ -45,10 +45,10 @@ jobs:
       uses: EnricoMi/publish-unit-test-result-action@v2
       if: always()
       with:
-        test-results-files: |
+        trx_files: |
           ${{ runner.temp }}/test-results/**/*.trx
-        check-name: Test Results
-        fail-on: 'test failures'
+        check_name: Test Results
+        fail_on: 'test failures'
         commit: ${{ github.event.pull_request.head.sha || github.sha }}
       
     - name: Upload test results
