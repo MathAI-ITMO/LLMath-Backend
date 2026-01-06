@@ -18,6 +18,15 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
+    <PackageReference Include="FluentAssertions" />
+    <PackageReference Include="Moq" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\MathLLMBackend.Core\MathLLMBackend.Core.csproj" />
+    <ProjectReference Include="..\..\src\MathLLMBackend.Domain\MathLLMBackend.Domain.csproj" />
+    <ProjectReference Include="..\..\src\MathLLMBackend.DataAccess\MathLLMBackend.DataAccess.csproj" />
   </ItemGroup>
 
 </Project>
