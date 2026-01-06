@@ -24,7 +24,6 @@ public class CoreServicesRegistrar
         
         services.Configure<LlmServiceConfiguration>(configuration.GetSection("OpenAi"));
         services.Configure<PromptConfiguration>(configuration.GetSection("DefaultPrompts"));
-        services.Configure<DefaultTasksOptions>(configuration.GetSection(DefaultTasksOptions.SectionName));
         services.Configure<LlmLoggingConfiguration>(configuration.GetSection("LlmLogging"));
         
         return services;

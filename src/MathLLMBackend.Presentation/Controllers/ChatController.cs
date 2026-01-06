@@ -41,17 +41,18 @@ namespace MathLLMBackend.Presentation.Controllers
             // TODO: refactor move logic to service
             var chat = new Chat(dto.Name, userId);
 
+            Chat createdChat;
             if (dto.ProblemHash is null)
             {
-                await _chatService.Create(chat, ct);
+                createdChat = await _chatService.Create(chat, ct);
             }
             else
             {
-                await _chatService.Create(chat, dto.ProblemHash, 0, ct);
+                createdChat = await _chatService.Create(chat, dto.ProblemHash, 0, ct);
             }
             
             return Ok(
-                new ChatDto(chat.Id, chat.Name, chat.Type.ToString(), null, null)
+                new ChatDto(createdChat.Id, createdChat.Name, createdChat.Type?.ToString() ?? "Chat", null, null)
             );
             
         }
@@ -125,7 +126,7 @@ namespace MathLLMBackend.Presentation.Controllers
                 return NotFound();
             }
             
-            if (chat.User.Id != userId)
+            if (chat.UserId != userId)
             {
                 return Unauthorized();
             }

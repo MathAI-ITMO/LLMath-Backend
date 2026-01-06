@@ -93,7 +93,7 @@ public class UserTaskService : IUserTaskService
                     DisplayName = !string.IsNullOrWhiteSpace(problemFromDb.Title)
                         ? problemFromDb.Title
                         : problemFromDb.Statement.Substring(0, Math.Min(50, problemFromDb.Statement.Length)) + "...",
-                    TaskType = taskType, // Пока используем переданный taskType, но можно будет брать из problemFromDb, если добавим туда поле "тип"
+                    TaskType = taskType,
                     Status = UserTaskStatus.NotStarted,
                     AssociatedChatId = null
                 };
@@ -130,8 +130,6 @@ public class UserTaskService : IUserTaskService
         {
              _logger.LogWarning("Task {UserTaskId} is already associated with a different chat {ExistingChatId}. Cannot associate with new chat {NewChatId}.", 
                 userTaskId, userTask.AssociatedChatId, chatId);
-            // Возможно, здесь стоит вернуть ошибку или текущее состояние?
-            // Пока возвращаем null, сигнализируя о проблеме.
             return null; 
         }
 
@@ -197,30 +195,4 @@ public class UserTaskService : IUserTaskService
         );
     }
 
-    // Метод GetDefaultTaskIds больше не нужен, можно его удалить или закомментировать.
-    private List<string>? GetDefaultTaskIds(int taskType)
-    {
-        return null; // Больше не используется
-        /* switch (taskType)
-        {
-            0 => _defaultTasksOptions.Type0,
-            1 => _defaultTasksOptions.Type1,
-            2 => _defaultTasksOptions.Type2,
-            3 => _defaultTasksOptions.Type3,
-            _ => null 
-        };*/
-    }
-    
-    // Возможно, потребуется аналог функции с фронтенда
-    /*
-    private string ExtractFinalIdentifier(string idLikeString)
-    {
-      if (idLikeString.Contains('.'))
-      {
-        var parts = idLikeString.Split('.');
-        return parts[^1]; // Используем ^1 для последнего элемента
-      }
-      return idLikeString;
-    }
-    */
 } 

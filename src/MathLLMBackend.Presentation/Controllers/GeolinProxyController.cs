@@ -1,7 +1,10 @@
 using MathLLMBackend.GeolinClient;
 using MathLLMBackend.GeolinClient.Models;
+using MathLLMBackend.GeolinClient.Options;
+using MathLLMBackend.Presentation.Dtos.Geolin;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Refit;
 using System;
 using System.Linq;
@@ -18,25 +21,15 @@ namespace MathLLMBackend.Presentation.Controllers
     {
         private readonly IGeolinApi _geolinApi;
         private readonly ILogger<GeolinProxyController> _logger;
+        private readonly GeolinClientOptions _geolinOptions;
         private readonly Random _random;
 
-        public GeolinProxyController(IGeolinApi geolinApi, ILogger<GeolinProxyController> logger)
+        public GeolinProxyController(IGeolinApi geolinApi, ILogger<GeolinProxyController> logger, IOptions<GeolinClientOptions> geolinOptions)
         {
             _geolinApi = geolinApi ?? throw new ArgumentNullException(nameof(geolinApi));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _geolinOptions = geolinOptions?.Value ?? throw new ArgumentNullException(nameof(geolinOptions));
             _random = new Random();
-        }
-
-        public class GeolinProblemDataResponse
-        {
-            public string? Name { get; set; }
-            public string? Hash { get; set; }
-            public string? Condition { get; set; }
-            public int? Seed { get; set; }
-            public string? Error { get; set; }
-            
-            [JsonPropertyName("problemParams")]
-            public string? ProblemParams { get; set; }
         }
 
         [HttpGet("problem-data")]
@@ -304,10 +297,6 @@ namespace MathLLMBackend.Presentation.Controllers
         [HttpPost("check-answer-direct")]
         public async Task<IActionResult> CheckAnswerDirect([FromBody] CheckAnswerRequest request)
         {
-            // Константы для прямого обращения к GeoLin API
-            const string GEOLIN_BASE_URL = "https://geolin.dev.mgsds.com";
-            const string GEOLIN_AUTH_HEADER = "Basic Z2VvbGluLXVzZXI6RmczNXRoaDI2a2ZO";
-            
             _logger.LogInformation("CheckAnswerDirect called with Hash: {Hash}, AnswerAttempt: {AnswerAttempt}, Seed: {Seed}",
                 request.Hash, request.AnswerAttempt, request.Seed);
                 
@@ -321,10 +310,32 @@ namespace MathLLMBackend.Presentation.Controllers
                 return BadRequest(new CheckAnswerResponse { Error = "Answer attempt is required and cannot be empty." });
             }
 
+            if (string.IsNullOrWhiteSpace(_geolinOptions.BaseAddress))
+            {
+                return StatusCode(500, new CheckAnswerResponse 
+                { 
+                    Error = "Geolin base address is not configured.",
+                    Hash = request.Hash,
+                    AnswerAttempt = request.AnswerAttempt,
+                    Seed = request.Seed
+                });
+            }
+
+            if (string.IsNullOrWhiteSpace(_geolinOptions.AuthorizationHeader))
+            {
+                return StatusCode(500, new CheckAnswerResponse 
+                { 
+                    Error = "Geolin authorization header is not configured.",
+                    Hash = request.Hash,
+                    AnswerAttempt = request.AnswerAttempt,
+                    Seed = request.Seed
+                });
+            }
+
             try
             {
                 using var httpClient = new HttpClient();
-                httpClient.DefaultRequestHeaders.Add("Authorization", GEOLIN_AUTH_HEADER);
+                httpClient.DefaultRequestHeaders.Add("Authorization", _geolinOptions.AuthorizationHeader);
 
                 var payload = new Dictionary<string, object>
                 {
@@ -356,11 +367,12 @@ namespace MathLLMBackend.Presentation.Controllers
                 }
 
                 var jsonPayload = JsonSerializer.Serialize(payload);
+                var checkAnswerUrl = $"{_geolinOptions.BaseAddress.TrimEnd('/')}/problem-answer-check";
                 _logger.LogInformation("Sending direct request to GeoLin: {Url}, Payload: {Payload}", 
-                    $"{GEOLIN_BASE_URL}/problem-answer-check", jsonPayload);
+                    checkAnswerUrl, jsonPayload);
 
                 var content = new StringContent(jsonPayload, System.Text.Encoding.UTF8, "application/json");
-                var response = await httpClient.PostAsync($"{GEOLIN_BASE_URL}/problem-answer-check", content);
+                var response = await httpClient.PostAsync(checkAnswerUrl, content);
 
                 var responseContent = await response.Content.ReadAsStringAsync();
                 _logger.LogInformation("GeoLin response: Status={Status}, Content={Content}", 
@@ -430,23 +442,5 @@ namespace MathLLMBackend.Presentation.Controllers
                 });
             }
         }
-    }
-
-    public class CheckAnswerRequest
-    {
-        public string Hash { get; set; } = "";
-        public string AnswerAttempt { get; set; } = "";
-        public int? Seed { get; set; }
-        public string? ProblemParams { get; set; }
-    }
-
-    public class CheckAnswerResponse
-    {
-        public bool IsCorrect { get; set; }
-        public string? Message { get; set; }
-        public string? Error { get; set; }
-        public string Hash { get; set; } = "";
-        public string AnswerAttempt { get; set; } = "";
-        public int? Seed { get; set; }
     }
 } 

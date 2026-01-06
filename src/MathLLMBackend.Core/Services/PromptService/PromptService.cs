@@ -1,4 +1,5 @@
 using MathLLMBackend.Core.Configuration;
+using MathLLMBackend.Core.Constants;
 using Microsoft.Extensions.Options;
 
 namespace MathLLMBackend.Core.Services.PromptService;
@@ -56,10 +57,10 @@ public class PromptService : IPromptService
     {
         return taskType switch
         {
-            1 => GetLearningSystemPrompt(),
-            2 => GetGuidedSystemPrompt(),
-            3 => GetExamSystemPrompt(),
-            _ => GetTutorSystemPrompt() // используем TutorSystemPrompt как стандартный для обычных задач
+            TaskTypes.Learning => GetLearningSystemPrompt(),
+            TaskTypes.Guided => GetGuidedSystemPrompt(),
+            TaskTypes.Exam => GetExamSystemPrompt(),
+            _ => GetTutorSystemPrompt()
         };
     }
     
@@ -87,10 +88,10 @@ public class PromptService : IPromptService
     {
         return taskType switch
         {
-            1 => GetLearningInitialPrompt(condition, firstStep),
-            2 => GetGuidedInitialPrompt(),
-            3 => GetExamInitialPrompt(),
-            _ => GetTutorInitialPrompt() // используем TutorInitialPrompt как стандартный для обычных задач
+            TaskTypes.Learning => GetLearningInitialPrompt(condition, firstStep),
+            TaskTypes.Guided => GetGuidedInitialPrompt(),
+            TaskTypes.Exam => GetExamInitialPrompt(),
+            _ => GetTutorInitialPrompt()
         };
     }
 

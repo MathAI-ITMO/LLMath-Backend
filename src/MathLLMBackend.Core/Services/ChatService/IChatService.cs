@@ -14,5 +14,4 @@ public interface IChatService
     Task<string> CreateMessage(Message message, CancellationToken ct);
     public Task<List<Message>> GetAllMessageFromChat(Chat chat, CancellationToken ct);
     public Task<Chat?> GetChatById(Guid id, CancellationToken ct);
-    public Task<Message?> GetMessageId(Guid id, CancellationToken ct);
 }
