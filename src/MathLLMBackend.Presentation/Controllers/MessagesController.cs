@@ -64,23 +64,25 @@ namespace MathLLMBackend.Presentation.Controllers
         }
     
         [HttpGet("get-messages-from-chat")]
-        //[Authorize]
+        [Authorize]
         public async Task<IActionResult> GetAllMessagesFromChat(Guid chatId, CancellationToken ct)
         {
-            // var userId  = _userManager.GetUserId(User);
-            // if (userId is null)
-            // {
-            //     return Unauthorized();
-            // }
-
-            var chat = await _service.GetChatById(chatId, ct);
-            if (chat is null)
+            var userId = _userManager.GetUserId(User);
+            if (userId == null)
             {
-                return BadRequest();
+                return Unauthorized();
             }
 
-            // if (chat.UserId != userId)
-            //     return Unauthorized();
+            var chat = await _service.GetChatById(chatId, ct);
+            if (chat == null)
+            {
+                return NotFound();
+            }
+
+            if (chat.UserId != userId)
+            {
+                return Forbid();
+            }
             
             var messages = await _service.GetAllMessageFromChat(chat, ct);
             

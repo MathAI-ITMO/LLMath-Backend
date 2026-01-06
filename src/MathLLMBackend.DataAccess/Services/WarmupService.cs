@@ -15,7 +15,7 @@ public class WarmupService
         _logger = logger;
     }
 
-    public async Task WarmupAsync()
+    public virtual async Task WarmupAsync()
     {
         try
         {

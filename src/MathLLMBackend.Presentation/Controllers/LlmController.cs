@@ -1,4 +1,5 @@
 using MathLLMBackend.Core.Services.LlmService;
+using MathLLMBackend.Presentation.Dtos.Llm;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -81,25 +82,4 @@ public class LlmController : ControllerBase
             return StatusCode(500, "Error extracting answer: " + ex.Message);
         }
     }
-}
-
-public class SolveProblemRequest
-{
-    public string ProblemDescription { get; set; } = "";
-}
-
-public class SolveProblemResponse
-{
-    public string Solution { get; set; } = "";
-}
-
-public class ExtractAnswerRequest
-{
-    public string ProblemStatement { get; set; } = "";
-    public string Solution { get; set; } = "";
-}
-
-public class ExtractAnswerResponse
-{
-    public string ExtractedAnswer { get; set; } = "";
 } 

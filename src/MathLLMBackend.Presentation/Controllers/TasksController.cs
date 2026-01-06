@@ -2,7 +2,7 @@ using MathLLMBackend.Core.Services.GeolinService;
 using MathLLMBackend.Presentation.Dtos.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
-using MathLLMBackend.Core.Services.ProblemsService;
+
 namespace MathLLMBackend.Presentation.Controllers;
 
 [Route("api/[controller]")]
@@ -10,12 +10,10 @@ namespace MathLLMBackend.Presentation.Controllers;
 public class TasksController : ControllerBase
 {
     private readonly IGeolinService _geolinService;
-    private readonly IProblemsService _problemsService;
 
-    public TasksController(IGeolinService geolinService, IProblemsService problemsService)
+    public TasksController(IGeolinService geolinService)
     {
         _geolinService = geolinService;
-        _problemsService = problemsService;
     }
 
     [HttpGet("problems")]
@@ -37,41 +35,5 @@ public class TasksController : ControllerBase
         );
 
         return Ok(result);
-    }
-
-    [HttpPost("saveProblem")]
-    [Authorize]
-    public async Task<IActionResult> SaveProblem(string name, string problemHash, [FromQuery] int variationCount = 1, CancellationToken ct = default)
-    {
-        var result = await _problemsService.SaveProblems(name, problemHash, variationCount, ct);
-        return Ok(result);
-    }
-
-    [HttpGet("getSavedProblems")]
-    [Authorize]
-    public async Task<IActionResult> GetSavedProblems(CancellationToken ct = default)
-    {
-        var problems = await _problemsService.GetSavedProblems(ct);
-        return Ok(problems);
-    }
-
-    [HttpGet("getSavedProblemsByNames")]
-    [Authorize]
-    public async Task<IActionResult> GetSavedProblemsByNames(string name, CancellationToken ct = default)
-    {
-        var problems = await _problemsService.GetSavedProblemsByNames(name, ct);
-        if (problems.Count == 0)
-        {
-            return NotFound();
-        }
-        return Ok(problems);     
-    }
-
-    [HttpGet("getAllNames")]
-    [Authorize]
-    public async Task<IActionResult> GetAllNames(CancellationToken ct = default)
-    {
-        var names = await _problemsService.GetAllTypes(ct);
-        return Ok(names);
     }    
 } 

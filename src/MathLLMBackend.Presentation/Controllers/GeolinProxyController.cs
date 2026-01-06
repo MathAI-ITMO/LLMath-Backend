@@ -1,7 +1,10 @@
 using MathLLMBackend.GeolinClient;
 using MathLLMBackend.GeolinClient.Models;
+using MathLLMBackend.GeolinClient.Options;
+using MathLLMBackend.Presentation.Dtos.Geolin;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Refit;
 using System;
 using System.Linq;
@@ -18,25 +21,15 @@ namespace MathLLMBackend.Presentation.Controllers
     {
         private readonly IGeolinApi _geolinApi;
         private readonly ILogger<GeolinProxyController> _logger;
+        private readonly GeolinClientOptions _geolinOptions;
         private readonly Random _random;
 
-        public GeolinProxyController(IGeolinApi geolinApi, ILogger<GeolinProxyController> logger)
+        public GeolinProxyController(IGeolinApi geolinApi, ILogger<GeolinProxyController> logger, IOptions<GeolinClientOptions> geolinOptions)
         {
             _geolinApi = geolinApi ?? throw new ArgumentNullException(nameof(geolinApi));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _geolinOptions = geolinOptions?.Value ?? throw new ArgumentNullException(nameof(geolinOptions));
             _random = new Random();
-        }
-
-        public class GeolinProblemDataResponse
-        {
-            public string? Name { get; set; }
-            public string? Hash { get; set; }
-            public string? Condition { get; set; }
-            public int? Seed { get; set; }
-            public string? Error { get; set; }
-            
-            [JsonPropertyName("problemParams")]
-            public string? ProblemParams { get; set; }
         }
 
         [HttpGet("problem-data")]
@@ -195,119 +188,12 @@ namespace MathLLMBackend.Presentation.Controllers
         }
 
         /// <summary>
-        /// Проверяет ответ на задачу через GeoLin API
-        /// </summary>
-        [HttpPost("check-answer")]
-        public async Task<IActionResult> CheckAnswer([FromBody] CheckAnswerRequest request)
-        {
-            _logger.LogInformation("CheckAnswer called with Hash: {Hash}, AnswerAttempt: {AnswerAttempt}, Seed: {Seed}, ProblemParams length: {ProblemParamsLength}",
-                request.Hash, request.AnswerAttempt, request.Seed, request.ProblemParams?.Length ?? 0);
-                
-            if (string.IsNullOrWhiteSpace(request.Hash))
-            {
-                _logger.LogWarning("CheckAnswer: Hash is empty");
-                return BadRequest(new CheckAnswerResponse 
-                { 
-                    Error = "Hash is required and cannot be empty." 
-                });
-            }
-
-            if (string.IsNullOrWhiteSpace(request.AnswerAttempt))
-            {
-                _logger.LogWarning("CheckAnswer: AnswerAttempt is empty");
-                return BadRequest(new CheckAnswerResponse 
-                { 
-                    Error = "Answer attempt is required and cannot be empty." 
-                });
-            }
-
-            try
-            {
-                _logger.LogInformation("Checking answer for hash '{Hash}' with seed {Seed}", request.Hash, request.Seed);
-
-                var checkRequest = new ProblemAnswerCheckRequest()
-                {
-                    Hash = request.Hash,
-                    AnswerAttempt = request.AnswerAttempt
-                };
-
-                // Добавляем seed если есть
-                if (request.Seed.HasValue)
-                {
-                    checkRequest.Seed = request.Seed.Value;
-                    _logger.LogInformation("Added seed {Seed} to GeoLin request", request.Seed.Value);
-                }
-
-                // Добавляем problem_params если есть  
-                if (!string.IsNullOrWhiteSpace(request.ProblemParams))
-                {
-                    checkRequest.ProblemParams = request.ProblemParams;
-                    _logger.LogInformation("Added ProblemParams to GeoLin request: {ProblemParams}", request.ProblemParams);
-                }
-
-                _logger.LogInformation("Sending request to GeoLin API: {Request}", System.Text.Json.JsonSerializer.Serialize(checkRequest));
-                
-                var checkResult = await _geolinApi.CheckProblemAnswer(checkRequest);
-                
-                _logger.LogInformation("Received response from GeoLin API: Verdict={Verdict}", checkResult.Verdict);
-
-                // ProblemAnswerCheckResponse содержит только поле Verdict (double)
-                // Преобразуем verdict в IsCorrect - считаем что verdict >= 1.0 означает правильный ответ
-                bool isCorrect = checkResult.Verdict >= 1.0;
-                string message = isCorrect 
-                    ? $"Ответ правильный (verdict: {checkResult.Verdict})" 
-                    : $"Ответ неправильный (verdict: {checkResult.Verdict})";
-
-                var response = new CheckAnswerResponse
-                {
-                    IsCorrect = isCorrect,
-                    Message = message,
-                    Hash = request.Hash,
-                    AnswerAttempt = request.AnswerAttempt,
-                    Seed = request.Seed
-                };
-
-                _logger.LogInformation("Answer check completed for hash '{Hash}'. Result: {IsCorrect} (verdict: {Verdict})", request.Hash, isCorrect, checkResult.Verdict);
-                return Ok(response);
-            }
-            catch (ApiException apiEx)
-            {
-                _logger.LogError(apiEx, "GeoLin API error when checking answer for hash '{Hash}'. Status: {StatusCode}, Content: {Content}", 
-                    request.Hash, apiEx.StatusCode, apiEx.Content);
-                
-                return StatusCode(500, new CheckAnswerResponse 
-                { 
-                    Error = $"GeoLin API error: {apiEx.Message}. Content: {apiEx.Content}",
-                    Hash = request.Hash,
-                    AnswerAttempt = request.AnswerAttempt,
-                    Seed = request.Seed
-                });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Unexpected error when checking answer for hash '{Hash}'. Exception type: {ExceptionType}, Message: {ExceptionMessage}", 
-                    request.Hash, ex.GetType().Name, ex.Message);
-                return StatusCode(500, new CheckAnswerResponse 
-                { 
-                    Error = $"An unexpected error occurred: {ex.Message}",
-                    Hash = request.Hash,
-                    AnswerAttempt = request.AnswerAttempt,
-                    Seed = request.Seed
-                });
-            }
-        }
-
-        /// <summary>
         /// Проверяет ответ на задачу через прямой вызов GeoLin API (обходной путь)
         /// TODO: Эту функцию надо заменить после того как сервис LLMath-Problems научится верифицировать решения задач
         /// </summary>
         [HttpPost("check-answer-direct")]
         public async Task<IActionResult> CheckAnswerDirect([FromBody] CheckAnswerRequest request)
         {
-            // Константы для прямого обращения к GeoLin API
-            const string GEOLIN_BASE_URL = "https://geolin.dev.mgsds.com";
-            const string GEOLIN_AUTH_HEADER = "Basic Z2VvbGluLXVzZXI6RmczNXRoaDI2a2ZO";
-            
             _logger.LogInformation("CheckAnswerDirect called with Hash: {Hash}, AnswerAttempt: {AnswerAttempt}, Seed: {Seed}",
                 request.Hash, request.AnswerAttempt, request.Seed);
                 
@@ -321,10 +207,32 @@ namespace MathLLMBackend.Presentation.Controllers
                 return BadRequest(new CheckAnswerResponse { Error = "Answer attempt is required and cannot be empty." });
             }
 
+            if (string.IsNullOrWhiteSpace(_geolinOptions.BaseAddress))
+            {
+                return StatusCode(500, new CheckAnswerResponse 
+                { 
+                    Error = "Geolin base address is not configured.",
+                    Hash = request.Hash,
+                    AnswerAttempt = request.AnswerAttempt,
+                    Seed = request.Seed
+                });
+            }
+
+            if (string.IsNullOrWhiteSpace(_geolinOptions.AuthorizationHeader))
+            {
+                return StatusCode(500, new CheckAnswerResponse 
+                { 
+                    Error = "Geolin authorization header is not configured.",
+                    Hash = request.Hash,
+                    AnswerAttempt = request.AnswerAttempt,
+                    Seed = request.Seed
+                });
+            }
+
             try
             {
                 using var httpClient = new HttpClient();
-                httpClient.DefaultRequestHeaders.Add("Authorization", GEOLIN_AUTH_HEADER);
+                httpClient.DefaultRequestHeaders.Add("Authorization", _geolinOptions.AuthorizationHeader);
 
                 var payload = new Dictionary<string, object>
                 {
@@ -356,11 +264,12 @@ namespace MathLLMBackend.Presentation.Controllers
                 }
 
                 var jsonPayload = JsonSerializer.Serialize(payload);
+                var checkAnswerUrl = $"{_geolinOptions.BaseAddress.TrimEnd('/')}/problem-answer-check";
                 _logger.LogInformation("Sending direct request to GeoLin: {Url}, Payload: {Payload}", 
-                    $"{GEOLIN_BASE_URL}/problem-answer-check", jsonPayload);
+                    checkAnswerUrl, jsonPayload);
 
                 var content = new StringContent(jsonPayload, System.Text.Encoding.UTF8, "application/json");
-                var response = await httpClient.PostAsync($"{GEOLIN_BASE_URL}/problem-answer-check", content);
+                var response = await httpClient.PostAsync(checkAnswerUrl, content);
 
                 var responseContent = await response.Content.ReadAsStringAsync();
                 _logger.LogInformation("GeoLin response: Status={Status}, Content={Content}", 
@@ -430,23 +339,5 @@ namespace MathLLMBackend.Presentation.Controllers
                 });
             }
         }
-    }
-
-    public class CheckAnswerRequest
-    {
-        public string Hash { get; set; } = "";
-        public string AnswerAttempt { get; set; } = "";
-        public int? Seed { get; set; }
-        public string? ProblemParams { get; set; }
-    }
-
-    public class CheckAnswerResponse
-    {
-        public bool IsCorrect { get; set; }
-        public string? Message { get; set; }
-        public string? Error { get; set; }
-        public string Hash { get; set; } = "";
-        public string AnswerAttempt { get; set; } = "";
-        public int? Seed { get; set; }
     }
 } 

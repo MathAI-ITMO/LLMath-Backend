@@ -1,6 +1,4 @@
-using System.Text;
 using MathLLMBackend.Domain.Entities;
-using Microsoft.AspNetCore.Identity;
 
 namespace MathLLMBackend.Core.Services.ChatService;
 
@@ -12,7 +10,9 @@ public interface IChatService
     Task Delete(Chat chat, CancellationToken ct);
     Task<List<Chat>> GetUserChats(string userId, CancellationToken ct);
     Task<string> CreateMessage(Message message, CancellationToken ct);
-    public Task<List<Message>> GetAllMessageFromChat(Chat chat, CancellationToken ct);
-    public Task<Chat?> GetChatById(Guid id, CancellationToken ct);
-    public Task<Message?> GetMessageId(Guid id, CancellationToken ct);
+    Task<List<Message>> GetAllMessageFromChat(Chat chat, CancellationToken ct);
+    Task<Chat?> GetChatById(Guid id, CancellationToken ct);
+    Task<ChatDetails> GetChatDetailsAsync(Guid chatId, CancellationToken ct);
 }
+
+public record ChatDetails(int? TaskType, string? TheoryLink);
