@@ -69,8 +69,13 @@ public class PromptService : IPromptService
         return _promptConfiguration.TutorInitialPrompt;
     }
     
+    /// <summary>
+    /// Gets the learning initial prompt. Note: condition and firstStep parameters are currently unused
+    /// but kept for interface consistency and potential future use.
+    /// </summary>
     public string GetLearningInitialPrompt(string condition, string firstStep)
     {
+        // TODO: Consider using condition and firstStep parameters if prompt template supports placeholders
         return _promptConfiguration.LearningInitialPrompt;
     }
     

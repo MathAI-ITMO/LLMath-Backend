@@ -28,17 +28,15 @@ public class UserTaskService : IUserTaskService
         _context = context;
         _problemsService = problemsService;
         _logger = logger;
-        // Загружаем маппинг taskType -> typeName из конфигурации (раздел TaskModeTitles)
-        _taskModeTitles = configuration.GetSection("TaskModeTitles").Get<Dictionary<string, string>>() ?? new Dictionary<string, string>();
+        _taskModeTitles = configuration.GetSection("TaskModeTitles").Get<Dictionary<string, string>>() 
+            ?? new Dictionary<string, string>();
     }
 
     public async Task<IEnumerable<UserTaskDto>> GetOrCreateUserTasksAsync(string userId, int taskType, CancellationToken cancellationToken = default)
     {
-        // Определяем имя типа задачи по конфигурации
-        string? typeName = _taskModeTitles.TryGetValue(taskType.ToString(), out var tn) ? tn : null;
-        if (typeName == null)
+        if (!_taskModeTitles.TryGetValue(taskType.ToString(), out var typeName) || typeName == null)
         {
-            _logger.LogWarning("Task type {TaskType} отсутствует в конфигурации TaskModeTitles. Будут возвращены пустые задачи.", taskType);
+            _logger.LogWarning("Task type {TaskType} is not configured in TaskModeTitles. Returning empty tasks.", taskType);
             return Enumerable.Empty<UserTaskDto>();
         }
 
@@ -67,43 +65,42 @@ public class UserTaskService : IUserTaskService
         {
             if (string.IsNullOrEmpty(problemFromDb.Id))
             {
-                _logger.LogWarning("Problem from DB has null or empty ID. Skipping. Problem ID: {ProblemID}", problemFromDb.Id);
+                _logger.LogWarning("Problem from DB has null or empty ID. Skipping.");
                 continue;
             }
 
-            // Проверяем, существует ли уже UserTask для этой задачи из LLMath-Problems
             var existingUserTask = await _context.UserTasks
                 .FirstOrDefaultAsync(ut => ut.ApplicationUserId == userId
                     && ut.ProblemHash == problemFromDb.Id
                     && ut.TaskType == taskType, cancellationToken);
             
             if (existingUserTask != null)
-                    {
-                // Если UserTask уже есть, просто используем его
+            {
                 newOrExistingUserTasks.Add(MapToDto(existingUserTask));
-                    }
-                    else
-                    {
-                // Если UserTask нет, создаем новый
+            }
+            else
+            {
+                var displayName = !string.IsNullOrWhiteSpace(problemFromDb.Title)
+                    ? problemFromDb.Title
+                    : GetTruncatedStatement(problemFromDb.Statement);
+                
                 var newTask = new UserTask
                 {
                     ApplicationUserId = userId,
-                    ProblemId = problemFromDb.Id,       // Используем ID из LLMath-Problems как ProblemId
-                    ProblemHash = problemFromDb.Id,     // И как ProblemHash для связи с ChatService
-                    DisplayName = !string.IsNullOrWhiteSpace(problemFromDb.Title)
-                        ? problemFromDb.Title
-                        : problemFromDb.Statement.Substring(0, Math.Min(50, problemFromDb.Statement.Length)) + "...",
+                    ProblemId = problemFromDb.Id,
+                    ProblemHash = problemFromDb.Id,
+                    DisplayName = displayName,
                     TaskType = taskType,
                     Status = UserTaskStatus.NotStarted,
                     AssociatedChatId = null
                 };
+                
                 _context.UserTasks.Add(newTask);
-                newOrExistingUserTasks.Add(MapToDto(newTask)); // Добавляем DTO нового UserTask
+                newOrExistingUserTasks.Add(MapToDto(newTask));
             }
         }
         
-        // Сохраняем все новые UserTask, созданные в этом цикле
-            await _context.SaveChangesAsync(cancellationToken);
+        await _context.SaveChangesAsync(cancellationToken);
 
         _logger.LogInformation("Returning {Count} UserTasks based on LLMath-Problems DB for user {UserId}", newOrExistingUserTasks.Count, userId);
         return newOrExistingUserTasks.OrderBy(ut => ut.DisplayName);
@@ -117,13 +114,13 @@ public class UserTaskService : IUserTaskService
         if (userTask == null)
         {
             _logger.LogWarning("UserTask with ID {UserTaskId} not found for user {UserId}", userTaskId, userId);
-            return null; // Задача не найдена или не принадлежит пользователю
+            return null;
         }
 
         if (userTask.Status == UserTaskStatus.InProgress && userTask.AssociatedChatId == chatId)
         {
             _logger.LogInformation("Task {UserTaskId} is already in progress with chat {ChatId}.", userTaskId, chatId);
-            return MapToDto(userTask); // Задача уже в нужном состоянии
+            return MapToDto(userTask);
         }
         
         if (userTask.AssociatedChatId != null && userTask.AssociatedChatId != chatId)
@@ -135,7 +132,6 @@ public class UserTaskService : IUserTaskService
 
         userTask.Status = UserTaskStatus.InProgress;
         userTask.AssociatedChatId = chatId;
-        // userTask.UpdatedAt = DateTime.UtcNow;
 
         _context.UserTasks.Update(userTask);
         await _context.SaveChangesAsync(cancellationToken);
@@ -182,7 +178,14 @@ public class UserTaskService : IUserTaskService
         return MapToDto(userTask);
     }
 
-    // Вспомогательный метод для маппинга Entity -> DTO
+    private static string GetTruncatedStatement(string statement)
+    {
+        const int maxLength = 50;
+        return statement.Length > maxLength 
+            ? statement.Substring(0, maxLength) + "..." 
+            : statement;
+    }
+
     private static UserTaskDto MapToDto(UserTask task)
     {
         return new UserTaskDto(

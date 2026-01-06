@@ -80,11 +80,13 @@ public class MessageControllerTests : BaseIntegrationTest
     }
 
     [Fact]
-    public async Task GetAllMessagesFromChat_WithNonExistentChat_ReturnsBadRequest()
+    public async Task GetAllMessagesFromChat_WithNonExistentChat_ReturnsNotFound()
     {
-        var response = await Client.GetAsync("/api/message/get-messages-from-chat?chatId=00000000-0000-0000-0000-000000000000");
+        await CreateAndLoginUserAsync();
+        
+        var response = await AuthenticatedGetAsync("/api/message/get-messages-from-chat?chatId=00000000-0000-0000-0000-000000000000");
 
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     [Fact]

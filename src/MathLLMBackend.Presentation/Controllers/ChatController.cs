@@ -1,13 +1,10 @@
 using MathLLMBackend.Core.Services.ChatService;
-using MathLLMBackend.Core.Services.ProblemsService;
 using MathLLMBackend.Domain.Entities;
 using MathLLMBackend.Domain.Enums;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using MathLLMBackend.Presentation.Dtos.Chats;
 using Microsoft.AspNetCore.Identity;
-using MathLLMBackend.DataAccess.Contexts;
-using Microsoft.EntityFrameworkCore;
 
 namespace MathLLMBackend.Presentation.Controllers
 {
@@ -18,14 +15,12 @@ namespace MathLLMBackend.Presentation.Controllers
         private readonly IChatService _chatService;
         private readonly ILogger<ChatController> _logger;
         private readonly UserManager<ApplicationUser> _userManager;
-        private readonly AppDbContext _context;
 
-        public ChatController(IChatService chatService, ILogger<ChatController> logger, UserManager<ApplicationUser> userManager, AppDbContext context)
+        public ChatController(IChatService chatService, ILogger<ChatController> logger, UserManager<ApplicationUser> userManager)
         {
             _chatService = chatService;
             _logger = logger;
             _userManager = userManager;
-            _context = context;
         }
 
         [HttpPost("create")]
@@ -38,18 +33,10 @@ namespace MathLLMBackend.Presentation.Controllers
                 return Unauthorized();
             }
             
-            // TODO: refactor move logic to service
             var chat = new Chat(dto.Name, userId);
-
-            Chat createdChat;
-            if (dto.ProblemHash is null)
-            {
-                createdChat = await _chatService.Create(chat, ct);
-            }
-            else
-            {
-                createdChat = await _chatService.Create(chat, dto.ProblemHash, 0, ct);
-            }
+            var createdChat = dto.ProblemHash == null
+                ? await _chatService.Create(chat, ct)
+                : await _chatService.Create(chat, dto.ProblemHash, 0, ct);
             
             return Ok(
                 new ChatDto(createdChat.Id, createdChat.Name, createdChat.Type?.ToString() ?? "Chat", null, null)
@@ -82,31 +69,8 @@ namespace MathLLMBackend.Presentation.Controllers
                 return NotFound();
             }
 
-            int? taskType = null;
-            string? theoryLink = null;
-            if (chat.Type == ChatType.ProblemSolver)
-            {
-                var userTask = await _context.UserTasks
-                                             .AsNoTracking()
-                                             .FirstOrDefaultAsync(ut => ut.AssociatedChatId == chatId, ct);
-                if (userTask != null)
-                {
-                    taskType = userTask.TaskType;
-                    // Get theory link from problem
-                    try
-                    {
-                        var problemsService = HttpContext.RequestServices.GetRequiredService<IProblemsService>();
-                        var problem = await problemsService.GetProblemFromDbAsync(userTask.ProblemId, ct);
-                        theoryLink = problem?.TheoryLink;
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogWarning(ex, "Failed to get theory link for problem {ProblemId}", userTask.ProblemId);
-                    }
-                }
-            }
-
-            return Ok(new ChatDto(chat.Id, chat.Name, chat.Type?.ToString() ?? "Chat", taskType, theoryLink));
+            var details = await _chatService.GetChatDetailsAsync(chatId, ct);
+            return Ok(new ChatDto(chat.Id, chat.Name, chat.Type?.ToString() ?? "Chat", details.TaskType, details.TheoryLink));
         }
 
         [HttpPost("delete/{id}")]
