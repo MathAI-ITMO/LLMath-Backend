@@ -1,9 +1,11 @@
 using System.Net;
 using Xunit;
 using FluentAssertions;
+using System.Net.Http.Json;
 
 namespace MathLLMBackend.IntegrationTests;
 
+[Collection("Integration Tests")]
 public class StatsControllerTests : BaseIntegrationTest
 {
     public StatsControllerTests(TestWebApplicationFactory factory) : base(factory)
@@ -36,5 +38,15 @@ public class StatsControllerTests : BaseIntegrationTest
         var response = await Client.GetAsync($"/api/stats/user-details/{user.Id}");
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
+    [Fact]
+    public async Task GetUserDetails_WithInvalidUserId_ReturnsOk()
+    {
+        var response = await Client.GetAsync("/api/stats/user-details/invalid-user-id");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var content = await response.Content.ReadFromJsonAsync<Dictionary<string, object>>();
+        content.Should().NotBeNull();
     }
 }

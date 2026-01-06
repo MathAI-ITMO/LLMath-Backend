@@ -4,6 +4,7 @@ using FluentAssertions;
 
 namespace MathLLMBackend.IntegrationTests;
 
+[Collection("Integration Tests")]
 public class UserControllerTests : BaseIntegrationTest
 {
     public UserControllerTests(TestWebApplicationFactory factory) : base(factory)

@@ -7,6 +7,7 @@ using Moq;
 
 namespace MathLLMBackend.IntegrationTests;
 
+[Collection("Integration Tests")]
 public class TasksControllerTests : BaseIntegrationTest
 {
     public TasksControllerTests(TestWebApplicationFactory factory) : base(factory)

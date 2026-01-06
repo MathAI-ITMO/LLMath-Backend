@@ -7,6 +7,7 @@ using MathLLMBackend.Presentation.Dtos.Common;
 
 namespace MathLLMBackend.IntegrationTests;
 
+[Collection("Integration Tests")]
 public class AuthControllerTests : BaseIntegrationTest
 {
     public AuthControllerTests(TestWebApplicationFactory factory) : base(factory)
@@ -61,6 +62,15 @@ public class AuthControllerTests : BaseIntegrationTest
         );
 
         var response = await Client.PostAsJsonAsync("/api/auth/register", registerDto);
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task Register_WithInvalidModelState_ReturnsBadRequest()
+    {
+        var invalidDto = new { Email = "not-an-email" };
+        var response = await Client.PostAsJsonAsync("/api/auth/register", invalidDto);
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }

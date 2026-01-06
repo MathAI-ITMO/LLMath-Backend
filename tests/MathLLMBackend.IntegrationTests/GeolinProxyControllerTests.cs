@@ -7,6 +7,7 @@ using Moq;
 
 namespace MathLLMBackend.IntegrationTests;
 
+[Collection("Integration Tests")]
 public class GeolinProxyControllerTests : BaseIntegrationTest
 {
     public GeolinProxyControllerTests(TestWebApplicationFactory factory) : base(factory)
