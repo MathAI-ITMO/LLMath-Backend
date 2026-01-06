@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /App
 
 COPY *.sln .
@@ -24,7 +24,7 @@ COPY . .
 
 RUN dotnet build src/MathLLMBackend.Presentation/MathLLMBackend.Presentation.csproj -c Release -o /App/out
 
-FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS final
+FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
 WORKDIR /App
 
 RUN adduser --disabled-password --gecos "" appuser && chown -R appuser /App
