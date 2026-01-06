@@ -1,3 +1,4 @@
+using MathLLMBackend.DataAccess.Configuration;
 using MathLLMBackend.DataAccess.Contexts;
 using MathLLMBackend.DataAccess.Services;
 using Microsoft.EntityFrameworkCore;
@@ -10,8 +11,28 @@ public static class DataAccessRegistrar
 {
     public static IServiceCollection Configure(IServiceCollection services, IConfiguration configuration)
     {
+        var dbConfig = configuration.GetSection(DatabaseConfiguration.SectionName).Get<DatabaseConfiguration>() 
+            ?? new DatabaseConfiguration { Provider = DatabaseProvider.Postgres };
+        
         services.AddDbContext<AppDbContext>(options =>
-            options.UseNpgsql(configuration.GetConnectionString("Postgres")));
+        {
+            switch (dbConfig.Provider)
+            {
+                case DatabaseProvider.InMemory:
+                    var dbName = dbConfig.InMemoryDatabaseName ?? "InMemoryDb";
+                    options.UseInMemoryDatabase(dbName);
+                    break;
+                case DatabaseProvider.Postgres:
+                default:
+                    var connectionString = configuration.GetConnectionString("Postgres");
+                    if (string.IsNullOrEmpty(connectionString))
+                    {
+                        throw new InvalidOperationException("PostgreSQL connection string is required when using Postgres provider.");
+                    }
+                    options.UseNpgsql(connectionString);
+                    break;
+            }
+        });
             
         services.AddScoped<WarmupService>();
         
