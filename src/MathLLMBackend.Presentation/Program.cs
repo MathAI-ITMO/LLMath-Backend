@@ -67,7 +67,10 @@ try
     
     builder.Services.AddAuthorization();
 
-    builder.Services.AddControllers();
+    builder.Services.AddControllers(options =>
+    {
+        options.ModelBinderProviders.Insert(0, new MathLLMBackend.Presentation.Binders.UserIdModelBinderProvider());
+    });
     builder.Services.AddEndpointsApiExplorer();
     
     builder.Services.ConfigureApplicationCookie(options =>
@@ -132,7 +135,7 @@ try
     }
 
     app.MapIdentityApi<ApplicationUser>();
-    app.UseMiddleware<ExceptionHandlingMiddleware>();
+    app.UseMiddleware<GlobalExceptionHandlerMiddleware>();
     app.UseAuthentication();
     app.UseAuthorization();
     app.MapControllers();

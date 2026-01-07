@@ -1,3 +1,4 @@
+using MathLLMBackend.Core.Constants;
 using MathLLMBackend.Core.Models;
 using MathLLMBackend.GeolinClient;
 using MathLLMBackend.GeolinClient.Models;
@@ -65,7 +66,7 @@ public class GeolinService : IGeolinService
         }
 
         var verdict = await GetAnswerVerdictAsync(hash, answerAttempt, seed, problemParams, ct);
-        var isCorrect = verdict >= 1.0;
+        var isCorrect = verdict >= GeolinConstants.CorrectAnswerVerdictThreshold;
 
         return new AnswerCheckResult
         {
@@ -91,12 +92,12 @@ public class GeolinService : IGeolinService
 
     private async Task<ProblemConditionResponse?> GetProblemConditionAsync(string hash, int seed, CancellationToken ct)
     {
-        return await _geolinApi.GetProblemCondition(new ProblemConditionRequest
-        {
-            Hash = hash,
-            Seed = seed,
-            Lang = "ru"
-        });
+               return await _geolinApi.GetProblemCondition(new ProblemConditionRequest
+               {
+                   Hash = hash,
+                   Seed = seed,
+                   Lang = LocalizationConstants.RussianLanguageCode
+               });
     }
 
     private async Task<double> GetAnswerVerdictAsync(string hash, string answerAttempt, int? seed, string? problemParams, CancellationToken ct)

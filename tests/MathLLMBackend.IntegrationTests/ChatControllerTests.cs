@@ -144,7 +144,7 @@ public class ChatControllerTests : BaseIntegrationTest
 
         var response = await AuthenticatedPostAsync($"/api/chat/delete/{createdChat.Id}");
 
-        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
     [Fact]

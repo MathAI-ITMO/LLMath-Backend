@@ -4,6 +4,7 @@ using MathLLMBackend.Core.Services.PromptService;
 using MathLLMBackend.DataAccess.Contexts;
 using MathLLMBackend.Domain.Entities;
 using MathLLMBackend.Domain.Enums;
+using MathLLMBackend.Domain.Exceptions;
 using MathLLMBackend.Core.Services.ProblemsService;
 using MathLLMBackend.ProblemsClient.Models;
 using Microsoft.EntityFrameworkCore;
@@ -82,8 +83,8 @@ public class ChatService : IChatService
             throw new KeyNotFoundException($"Problem with ID {problemDbId} not found in LLMath-Problems database.");
         }
 
-        var conditionSnippet = problem.Statement.Length > 50 
-            ? problem.Statement.Substring(0, 50) + "..." 
+        var conditionSnippet = problem.Statement.Length > DisplayConstants.MaxSnippetLength 
+            ? problem.Statement.Substring(0, DisplayConstants.MaxSnippetLength) + "..." 
             : problem.Statement;
         
         _logger.LogInformation("Using problem: {ProblemId}, Condition snippet: {ConditionSnippet}", 
@@ -193,7 +194,20 @@ public class ChatService : IChatService
         _dbContext.Chats.Remove(chat);
         await _dbContext.SaveChangesAsync(ct);
     }
+
+    public async Task DeleteChat(Guid chatId, string userId, CancellationToken ct)
+    {
+        var chat = await GetChatByIdForUser(chatId, userId, ct);
+        await Delete(chat, ct);
+    }
     
+    public async Task<string> CreateMessageForUser(Guid chatId, string userId, string text, CancellationToken ct)
+    {
+        var chat = await GetChatByIdForUser(chatId, userId, ct);
+        var message = new Message(chat, text, MessageType.User);
+        return await CreateMessage(message, ct);
+    }
+
     public async Task<string> CreateMessage(Message message, CancellationToken ct)
     {
         await _dbContext.Messages.AddAsync(message, ct);
@@ -239,7 +253,7 @@ public class ChatService : IChatService
 
     private async Task<int> DetermineTaskTypeAsync(Chat currentChat, CancellationToken ct)
     {
-        int taskType = 0; 
+        int taskType = TaskTypes.Default; 
         
         if (currentChat.Type == ChatType.ProblemSolver)
         {
@@ -291,6 +305,18 @@ public class ChatService : IChatService
             .ToListAsync(ct);
     }
 
+    public async Task<List<Message>> GetAllMessagesFromChatForUser(Guid chatId, string userId, CancellationToken ct)
+    {
+        var chat = await GetChatByIdForUser(chatId, userId, ct);
+        return await GetAllMessageFromChat(chat, ct);
+    }
+
+    public async Task<List<Message>> GetUserVisibleMessagesFromChat(Guid chatId, string userId, CancellationToken ct)
+    {
+        var allMessages = await GetAllMessagesFromChatForUser(chatId, userId, ct);
+        return allMessages.Where(m => !m.IsSystemPrompt).ToList();
+    }
+
     public async Task<Chat?> GetChatById(Guid id, CancellationToken ct)
     {
         var chat = await _dbContext.Chats
@@ -303,6 +329,23 @@ public class ChatService : IChatService
                 .LoadAsync(ct);
         }
         
+        return chat;
+    }
+
+    public async Task<Chat> GetChatByIdForUser(Guid chatId, string userId, CancellationToken ct)
+    {
+        var chat = await GetChatById(chatId, ct);
+        
+        if (chat == null)
+        {
+            throw new KeyNotFoundException($"Chat with ID {chatId} not found.");
+        }
+
+        if (chat.UserId != userId)
+        {
+            throw new AuthorizationException("You do not have permission to access this chat.");
+        }
+
         return chat;
     }
 
