@@ -53,7 +53,7 @@ namespace MathLLMBackend.Presentation.Controllers
                         { "", new[] { errorMessage } }
                     },
                     title = "Ошибка регистрации",
-                    status = 400,
+                    status = StatusCodes.Status400BadRequest,
                     detail = isDuplicate 
                         ? errorMessage 
                         : "Не удалось создать аккаунт. Пожалуйста, исправьте ошибки и попробуйте снова."

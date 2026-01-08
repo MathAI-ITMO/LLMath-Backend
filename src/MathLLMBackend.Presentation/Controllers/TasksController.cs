@@ -1,3 +1,4 @@
+using MathLLMBackend.Core.Constants;
 using MathLLMBackend.Core.Services.GeolinService;
 using MathLLMBackend.Presentation.Dtos.Tasks;
 using Microsoft.AspNetCore.Mvc;
@@ -18,7 +19,11 @@ public class TasksController : ControllerBase
 
     [HttpGet("problems")]
     [Authorize]
-    public async Task<IActionResult> GetProblems([FromQuery] int page = 1, [FromQuery] int size = 10, [FromQuery] string? prefixName = "", CancellationToken ct = default)
+    public async Task<IActionResult> GetProblems(
+        [FromQuery] int page = GeolinConstants.Pagination.DefaultPage, 
+        [FromQuery] int size = GeolinConstants.Pagination.DefaultPageSize, 
+        [FromQuery] string? prefixName = "", 
+        CancellationToken ct = default)
     {
         var response = await _geolinService.GetProblems(page, size, prefixName, ct);
         

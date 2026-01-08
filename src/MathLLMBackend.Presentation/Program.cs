@@ -22,15 +22,7 @@ var logger = LogManager.Setup().LoadConfigurationFromAppSettings().GetCurrentCla
 
 try
 {
-    // Устанавливаем минимальное количество рабочих потоков и потоков завершения IOCP
-    // Значения подбираются экспериментально. Например:
-    int minWorkerThreads = 100; 
-    int minCompletionPortThreads = 100; 
-    ThreadPool.SetMinThreads(minWorkerThreads, minCompletionPortThreads);
-
     var builder = WebApplication.CreateBuilder(args);
-    // Загружаем секретные настройки (не фиксированы в репозитории)
-    builder.Configuration.AddJsonFile("appsettings.Secrets.json", optional: true, reloadOnChange: true);
     builder.Services.AddHttpLogging(o => { });
     var configuration = builder.Configuration;
     var corsConfiguration = configuration.GetSection(nameof(CorsConfiguration)).Get<CorsConfiguration>() ?? new CorsConfiguration();
@@ -69,7 +61,8 @@ try
 
     builder.Services.AddControllers(options =>
     {
-        options.ModelBinderProviders.Insert(0, new MathLLMBackend.Presentation.Binders.UserIdModelBinderProvider());
+        const int firstBinderIndex = 0;
+        options.ModelBinderProviders.Insert(firstBinderIndex, new MathLLMBackend.Presentation.Binders.UserIdModelBinderProvider());
     });
     builder.Services.AddEndpointsApiExplorer();
     

@@ -48,15 +48,15 @@ namespace MathLLMBackend.Presentation.Controllers
                 {
                     return NotFound(new GeolinProblemDataResponse { Error = ex.Message });
                 }
-                return StatusCode(500, new GeolinProblemDataResponse { Error = ex.Message });
+                return StatusCode(StatusCodes.Status500InternalServerError, new GeolinProblemDataResponse { Error = ex.Message });
             }
             catch (ApiException ex)
             {
-                return StatusCode(500, new GeolinProblemDataResponse { Error = $"GeoLin API error: {ex.Message}" });
+                return StatusCode(StatusCodes.Status500InternalServerError, new GeolinProblemDataResponse { Error = $"GeoLin API error: {ex.Message}" });
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new GeolinProblemDataResponse { Error = $"Error: {ex.Message}" });
+                return StatusCode(StatusCodes.Status500InternalServerError, new GeolinProblemDataResponse { Error = $"Error: {ex.Message}" });
             }
         }
 
@@ -110,7 +110,7 @@ namespace MathLLMBackend.Presentation.Controllers
             }
             catch (InvalidOperationException ex)
             {
-                return StatusCode(500, new CheckAnswerResponse 
+                return StatusCode(StatusCodes.Status500InternalServerError, new CheckAnswerResponse 
                 { 
                     Error = ex.Message,
                     Hash = request.Hash,
@@ -120,7 +120,7 @@ namespace MathLLMBackend.Presentation.Controllers
             }
             catch (HttpRequestException ex)
             {
-                return StatusCode(500, new CheckAnswerResponse 
+                return StatusCode(StatusCodes.Status500InternalServerError, new CheckAnswerResponse 
                 { 
                     Error = ex.Message,
                     Hash = request.Hash,
@@ -130,7 +130,7 @@ namespace MathLLMBackend.Presentation.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new CheckAnswerResponse 
+                return StatusCode(StatusCodes.Status500InternalServerError, new CheckAnswerResponse 
                 { 
                     Error = $"Error: {ex.Message}",
                     Hash = request.Hash,

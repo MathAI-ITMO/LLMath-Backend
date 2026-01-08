@@ -1,5 +1,6 @@
 using System.Text;
 using MathLLMBackend.Core.Configuration;
+using MathLLMBackend.Core.Constants;
 using MathLLMBackend.Domain.Entities;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -83,11 +84,11 @@ public class LlmLoggingService : ILlmLoggingService
     {
         return taskType switch
         {
-            0 => "Default (Tutor)",
-            1 => "Learning",
-            2 => "Guided",
-            3 => "Exam",
+            TaskTypes.Default => "Default (Tutor)",
+            TaskTypes.Learning => "Learning",
+            TaskTypes.Guided => "Guided",
+            TaskTypes.Exam => "Exam",
             _ => $"Unknown ({taskType})"
         };
     }
-} 
+}
