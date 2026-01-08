@@ -106,6 +106,7 @@ try
             };
 
             c.AddSecurityRequirement(openApiSecurityRequirement);
+            c.OperationFilter<FromUserIdOperationFilter>();
         });
 
     var app = builder.Build();

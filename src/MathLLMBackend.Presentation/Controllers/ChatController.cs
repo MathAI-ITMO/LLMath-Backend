@@ -1,8 +1,6 @@
 using MathLLMBackend.Core.Constants;
 using MathLLMBackend.Core.Services.ChatService;
 using MathLLMBackend.Domain.Entities;
-using MathLLMBackend.Domain.Enums;
-using MathLLMBackend.Domain.Exceptions;
 using MathLLMBackend.Presentation.Binders;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
