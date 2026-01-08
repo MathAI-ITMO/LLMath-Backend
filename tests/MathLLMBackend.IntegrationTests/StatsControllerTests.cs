@@ -15,7 +15,7 @@ public class StatsControllerTests : BaseIntegrationTest
     [Fact]
     public async Task GetTaskModeTitles_ReturnsOk()
     {
-        var response = await Client.GetAsync("/api/stats/task-mode-titles");
+        var response = await AuthenticatedGetAsync("/api/stats/task-mode-titles");
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var content = await response.Content.ReadAsStringAsync();
@@ -25,8 +25,7 @@ public class StatsControllerTests : BaseIntegrationTest
     [Fact]
     public async Task GetUserStats_ReturnsOk()
     {
-        await CreateAndLoginUserAsync();
-        var response = await Client.GetAsync("/api/stats/user-stats");
+        var response = await AuthenticatedGetAsync("/api/stats/user-stats");
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
     }
@@ -35,18 +34,17 @@ public class StatsControllerTests : BaseIntegrationTest
     public async Task GetUserDetails_WithValidUserId_ReturnsOk()
     {
         var user = await CreateAndLoginUserAsync();
-        var response = await Client.GetAsync($"/api/stats/user-details/{user.Id}");
+        var response = await AuthenticatedClient.GetAsync($"/api/stats/user-details/{user.Id}");
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
     [Fact]
-    public async Task GetUserDetails_WithInvalidUserId_ReturnsOk()
+    public async Task GetUserDetails_WithOtherUserId_ReturnsForbidden()
     {
-        var response = await Client.GetAsync("/api/stats/user-details/invalid-user-id");
+        await CreateAndLoginUserAsync();
+        var response = await AuthenticatedClient.GetAsync("/api/stats/user-details/some-other-user-id");
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
-        var content = await response.Content.ReadFromJsonAsync<Dictionary<string, object>>();
-        content.Should().NotBeNull();
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 }
