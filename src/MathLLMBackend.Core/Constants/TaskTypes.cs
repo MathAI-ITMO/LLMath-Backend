@@ -1,8 +1,5 @@
 namespace MathLLMBackend.Core.Constants;
 
-/// <summary>
-/// Constants for task types used throughout the application
-/// </summary>
 public static class TaskTypes
 {
     public const int Default = 0;

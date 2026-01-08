@@ -1,6 +1,6 @@
 using FluentAssertions;
-using MathLLMBackend.Core.Dtos;
 using MathLLMBackend.Core.Services;
+using MathLLMBackend.Core.Services.ChatService;
 using MathLLMBackend.Core.Services.ProblemsService;
 using MathLLMBackend.DataAccess.Contexts;
 using MathLLMBackend.Domain.Entities;
@@ -18,6 +18,7 @@ public class UserTaskServiceTests
 {
     private readonly AppDbContext _context;
     private readonly Mock<IProblemsService> _problemsServiceMock;
+    private readonly Mock<IChatService> _chatServiceMock;
     private readonly Mock<ILogger<UserTaskService>> _loggerMock;
     private readonly IConfiguration _configuration;
     private readonly UserTaskService _service;
@@ -30,6 +31,7 @@ public class UserTaskServiceTests
 
         _context = new AppDbContext(options);
         _problemsServiceMock = new Mock<IProblemsService>();
+        _chatServiceMock = new Mock<IChatService>();
         _loggerMock = new Mock<ILogger<UserTaskService>>();
 
         var configDict = new Dictionary<string, string?>
@@ -46,6 +48,7 @@ public class UserTaskServiceTests
         _service = new UserTaskService(
             _context,
             _problemsServiceMock.Object,
+            _chatServiceMock.Object,
             _loggerMock.Object,
             _configuration);
     }

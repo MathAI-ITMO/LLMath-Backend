@@ -1,3 +1,4 @@
+using MathLLMBackend.Core.Constants;
 using MathLLMBackend.GeolinClient;
 using MathLLMBackend.GeolinClient.Models;
 using MathLLMBackend.ProblemsClient;
@@ -43,7 +44,7 @@ public class ProblemsService : IProblemsService
                     {
                         Hash = problemHash,
                         Seed = seed,
-                        Lang = "ru"
+                        Lang = LocalizationConstants.RussianLanguageCode
                     });
                 var problemMongo = new ProblemRequest()
                 {

@@ -101,7 +101,7 @@ public class UserTasksControllerTests : BaseIntegrationTest
         
         var getUserTasksResponse = await AuthenticatedGetAsync("/api/usertasks?taskType=1");
         getUserTasksResponse.StatusCode.Should().Be(HttpStatusCode.OK);
-        var tasks = await getUserTasksResponse.Content.ReadFromJsonAsync<List<MathLLMBackend.Core.Dtos.UserTaskDto>>();
+        var tasks = await getUserTasksResponse.Content.ReadFromJsonAsync<List<MathLLMBackend.Presentation.Dtos.Tasks.UserTaskDto>>();
         
         tasks.Should().NotBeNull().And.NotBeEmpty();
         var taskId = tasks!.First().Id;

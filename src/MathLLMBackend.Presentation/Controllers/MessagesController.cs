@@ -1,52 +1,32 @@
 using MathLLMBackend.Core.Services.ChatService;
 using MathLLMBackend.Domain.Entities;
-using Microsoft.AspNetCore.Mvc;
+using MathLLMBackend.Domain.Exceptions;
+using MathLLMBackend.Presentation.Binders;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using MathLLMBackend.Domain.Enums;
 using MathLLMBackend.Presentation.Dtos.Messages;
-using Microsoft.AspNetCore.Identity;
 
 namespace MathLLMBackend.Presentation.Controllers
 {
+    [Authorize]
     [Route("api/[controller]")]
     [ApiController]
     public class MessageController : ControllerBase
     {
         private readonly IChatService _service;
         private readonly ILogger<MessageController> _logger;
-        private readonly UserManager<ApplicationUser> _userManager;
 
-        public MessageController(IChatService service, ILogger<MessageController> logger, UserManager<ApplicationUser> userManager)
+        public MessageController(IChatService service, ILogger<MessageController> logger)
         {
             _service = service;
             _logger = logger;
-            _userManager = userManager;
         }
     
         [HttpPost("complete")]
-        [Authorize]
-        public async Task<IActionResult> Complete([FromBody] MessageCreateDto dto, CancellationToken ct)
+        public async Task<IActionResult> Complete([FromBody] MessageCreateDto dto, [FromUserId] string userId, CancellationToken ct)
         {
-            var userId = _userManager.GetUserId(User);
-            if (userId is null)
-            {
-                return Unauthorized();
-            }
-
-            var chat = await _service.GetChatById(dto.ChatId, ct);
-            if (chat is null)
-            {
-                return BadRequest("Chat not found.");
-            }
-
-            if (chat.UserId != userId)
-            {
-                return Forbid();
-            }
-            
-            var message = new Message(chat, dto.Text, MessageType.User);
-            
-            string llmResponseText = await _service.CreateMessage(message, ct);
+            string llmResponseText = await _service.CreateMessageForUser(dto.ChatId, userId, dto.Text, ct);
 
             if (Response.HasStarted)
             {
@@ -64,31 +44,12 @@ namespace MathLLMBackend.Presentation.Controllers
         }
     
         [HttpGet("get-messages-from-chat")]
-        [Authorize]
-        public async Task<IActionResult> GetAllMessagesFromChat(Guid chatId, CancellationToken ct)
+        public async Task<IActionResult> GetAllMessagesFromChat(Guid chatId, [FromUserId] string userId, CancellationToken ct)
         {
-            var userId = _userManager.GetUserId(User);
-            if (userId == null)
-            {
-                return Unauthorized();
-            }
-
-            var chat = await _service.GetChatById(chatId, ct);
-            if (chat == null)
-            {
-                return NotFound();
-            }
-
-            if (chat.UserId != userId)
-            {
-                return Forbid();
-            }
-            
-            var messages = await _service.GetAllMessageFromChat(chat, ct);
+            var messages = await _service.GetUserVisibleMessagesFromChat(chatId, userId, ct);
             
             return Ok(
-                messages.Where(m => !m.IsSystemPrompt)
-                    .Select(m => new MessageDto(m.Id, m.ChatId, m.Text, m.MessageType.ToString(), m.CreatedAt))
+                messages.Select(m => new MessageDto(m.Id, m.ChatId, m.Text, m.MessageType.ToString(), m.CreatedAt))
             );
         }
     }
