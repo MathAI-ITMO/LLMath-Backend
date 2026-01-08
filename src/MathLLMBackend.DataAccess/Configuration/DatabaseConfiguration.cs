@@ -7,9 +7,3 @@ public class DatabaseConfiguration
     public DatabaseProvider Provider { get; set; } = DatabaseProvider.Postgres;
     public string? InMemoryDatabaseName { get; set; }
 }
-
-public enum DatabaseProvider
-{
-    Postgres,
-    InMemory
-}

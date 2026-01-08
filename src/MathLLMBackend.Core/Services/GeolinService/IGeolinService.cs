@@ -1,4 +1,4 @@
-using MathLLMBackend.Core.Models;
+using MathLLMBackend.Domain.Models;
 using MathLLMBackend.GeolinClient.Models;
 
 namespace MathLLMBackend.Core.Services.GeolinService;

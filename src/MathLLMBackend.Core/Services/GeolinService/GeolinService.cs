@@ -1,5 +1,5 @@
 using MathLLMBackend.Core.Constants;
-using MathLLMBackend.Core.Models;
+using MathLLMBackend.Domain.Models;
 using MathLLMBackend.GeolinClient;
 using MathLLMBackend.GeolinClient.Models;
 using MathLLMBackend.GeolinClient.Options;

@@ -1,4 +1,4 @@
-namespace MathLLMBackend.Core.Models;
+namespace MathLLMBackend.Domain.Models;
 
 public class AnswerCheckResult
 {

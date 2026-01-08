@@ -1,6 +1,6 @@
 using MathLLMBackend.Core.Constants;
 using MathLLMBackend.Core.Services;
-using MathLLMBackend.Core.Dtos;
+using MathLLMBackend.Presentation.Dtos.Tasks;
 using MathLLMBackend.Presentation.Binders;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;

@@ -1,4 +1,4 @@
-using MathLLMBackend.Core.Models;
+using MathLLMBackend.Domain.Models;
 
 namespace MathLLMBackend.Core.Services.StatsService;
 

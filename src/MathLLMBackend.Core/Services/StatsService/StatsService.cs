@@ -1,4 +1,4 @@
-using MathLLMBackend.Core.Models;
+using MathLLMBackend.Domain.Models;
 using MathLLMBackend.DataAccess.Contexts;
 using MathLLMBackend.Domain.Enums;
 using Microsoft.EntityFrameworkCore;

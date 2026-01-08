@@ -1,5 +1,4 @@
 using FluentAssertions;
-using MathLLMBackend.Core.Dtos;
 using MathLLMBackend.Core.Services;
 using MathLLMBackend.Core.Services.ChatService;
 using MathLLMBackend.Core.Services.ProblemsService;

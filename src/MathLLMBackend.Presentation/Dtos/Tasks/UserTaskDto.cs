@@ -1,6 +1,6 @@
 using MathLLMBackend.Domain.Enums;
 
-namespace MathLLMBackend.Core.Dtos; // Изменено пространство имен
+namespace MathLLMBackend.Presentation.Dtos.Tasks; // Изменено пространство имен
 
 public record UserTaskDto(
     Guid Id,
