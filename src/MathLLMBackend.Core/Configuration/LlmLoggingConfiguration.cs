@@ -9,9 +9,4 @@ public class LlmLoggingConfiguration
     /// Включено ли логирование
     /// </summary>
     public bool Enabled { get; set; }
-    
-    /// <summary>
-    /// Путь к файлу логов
-    /// </summary>
-    public string LogFilePath { get; set; } = "logs/llm_interactions.log";
-} 
+}
