@@ -148,6 +148,22 @@ public class ChatControllerTests : BaseIntegrationTest
     }
 
     [Fact]
+    public async Task GetChatDetails_WithOtherUserChat_ReturnsForbidden()
+    {
+        await CreateAndLoginUserAsync();
+        var otherUser = await Factory.CreateTestUserAsync("other_details@example.com", "Test123!@#");
+        
+        using var scope = Factory.Services.CreateScope();
+        var chatService = scope.ServiceProvider.GetRequiredService<MathLLMBackend.Core.Services.ChatService.IChatService>();
+        var chat = new MathLLMBackend.Domain.Entities.Chat("Other User Chat Details", otherUser.Id);
+        var createdChat = await chatService.Create(chat, CancellationToken.None);
+
+        var response = await AuthenticatedGetAsync($"/api/chat/get/{createdChat.Id}");
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Fact]
     public async Task CreateChat_WithProblemHash_ReturnsOk()
     {
         Factory.ProblemsApiMock

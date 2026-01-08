@@ -18,7 +18,7 @@ public interface IChatService
     Task<List<Message>> GetUserVisibleMessagesFromChat(Guid chatId, string userId, CancellationToken ct);
     Task<Chat?> GetChatById(Guid id, CancellationToken ct);
     Task<Chat> GetChatByIdForUser(Guid chatId, string userId, CancellationToken ct);
-    Task<ChatDetails> GetChatDetailsAsync(Guid chatId, CancellationToken ct);
+    Task<ChatDetails> GetChatDetailsAsync(Guid chatId, string userId, CancellationToken ct);
 }
 
 public record ChatDetails(int? TaskType, string? TheoryLink);

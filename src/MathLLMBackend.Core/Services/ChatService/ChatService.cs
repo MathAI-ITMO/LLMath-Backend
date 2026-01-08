@@ -363,11 +363,11 @@ public class ChatService : IChatService
         return createdChat.Id;
     }
 
-    public async Task<ChatDetails> GetChatDetailsAsync(Guid chatId, CancellationToken ct)
+    public async Task<ChatDetails> GetChatDetailsAsync(Guid chatId, string userId, CancellationToken ct)
     {
-        var chat = await GetChatById(chatId, ct);
+        var chat = await GetChatByIdForUser(chatId, userId, ct);
         
-        if (chat == null || chat.Type != ChatType.ProblemSolver)
+        if (chat.Type != ChatType.ProblemSolver)
         {
             return new ChatDetails(null, null);
         }

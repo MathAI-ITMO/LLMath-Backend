@@ -46,16 +46,10 @@ namespace MathLLMBackend.Presentation.Controllers
         }
 
         [HttpGet("get/{chatId:guid}")]
-        public async Task<IActionResult> GetChatDetails(Guid chatId, CancellationToken ct)
+        public async Task<IActionResult> GetChatDetails(Guid chatId, [FromUserId] string userId, CancellationToken ct)
         {
-            var chat = await _chatService.GetChatById(chatId, ct);
-            if (chat == null)
-            {
-                _logger.LogWarning("Chat with ID {ChatId} not found when trying to get details.", chatId);
-                return NotFound();
-            }
-
-            var details = await _chatService.GetChatDetailsAsync(chatId, ct);
+            var details = await _chatService.GetChatDetailsAsync(chatId, userId, ct);
+            var chat = await _chatService.GetChatByIdForUser(chatId, userId, ct);
             return Ok(new ChatDto(chat.Id, chat.Name, chat.Type?.ToString() ?? ChatConstants.DefaultChatTypeName, details.TaskType, details.TheoryLink));
         }
 

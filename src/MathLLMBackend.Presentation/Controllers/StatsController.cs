@@ -1,11 +1,14 @@
 using MathLLMBackend.Core.Services.StatsService;
+using MathLLMBackend.Presentation.Binders;
 using MathLLMBackend.Presentation.Dtos.Stats;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace MathLLMBackend.Presentation.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize]
 public class StatsController : ControllerBase
 {
     private readonly IStatsService _statsService;
@@ -47,8 +50,15 @@ public class StatsController : ControllerBase
     }
 
     [HttpGet("user-details/{userId}")]
-    public async Task<IActionResult> GetUserDetails(string userId, CancellationToken ct = default)
+    public async Task<IActionResult> GetUserDetails(string userId, [FromUserId] string currentUserId, CancellationToken ct = default)
     {
+        // For now, only allow users to see their own details. 
+        // If admin functionality is needed later, this should be updated.
+        if (userId != currentUserId)
+        {
+            return Forbid();
+        }
+
         var detail = await _statsService.GetUserDetailsAsync(userId, ct);
         
         var dto = new UserDetailDto
