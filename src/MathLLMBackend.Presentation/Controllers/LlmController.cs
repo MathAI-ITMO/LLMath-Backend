@@ -1,4 +1,6 @@
+using MathLLMBackend.Core.Constants;
 using MathLLMBackend.Core.Services.LlmService;
+using MathLLMBackend.Presentation.Dtos.Llm;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -37,7 +39,7 @@ public class LlmController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error solving problem with LLM");
-            return StatusCode(500, "Error solving problem: " + ex.Message);
+            return StatusCode(StatusCodes.Status500InternalServerError, "Error solving problem: " + ex.Message);
         }
     }
 
@@ -65,9 +67,9 @@ public class LlmController : ControllerBase
         try
         {
             _logger.LogInformation("Extracting answer from solution for problem. ProblemStatement preview: {ProblemPreview}", 
-                request.ProblemStatement.Substring(0, Math.Min(100, request.ProblemStatement.Length)));
+                request.ProblemStatement.Substring(0, Math.Min(MessageConstants.Logging.MaxProblemPreviewLength, request.ProblemStatement.Length)));
             _logger.LogInformation("Solution preview: {SolutionPreview}", 
-                request.Solution.Substring(0, Math.Min(200, request.Solution.Length)));
+                request.Solution.Substring(0, Math.Min(MessageConstants.Logging.MaxSolutionPreviewLength, request.Solution.Length)));
                 
             var extractedAnswer = await _llmService.ExtractAnswer(request.ProblemStatement, request.Solution, ct);
             
@@ -78,28 +80,7 @@ public class LlmController : ControllerBase
         {
             _logger.LogError(ex, "Error extracting answer from solution. Exception type: {ExceptionType}, Message: {ExceptionMessage}", 
                 ex.GetType().Name, ex.Message);
-            return StatusCode(500, "Error extracting answer: " + ex.Message);
+            return StatusCode(StatusCodes.Status500InternalServerError, "Error extracting answer: " + ex.Message);
         }
     }
 }
-
-public class SolveProblemRequest
-{
-    public string ProblemDescription { get; set; } = "";
-}
-
-public class SolveProblemResponse
-{
-    public string Solution { get; set; } = "";
-}
-
-public class ExtractAnswerRequest
-{
-    public string ProblemStatement { get; set; } = "";
-    public string Solution { get; set; } = "";
-}
-
-public class ExtractAnswerResponse
-{
-    public string ExtractedAnswer { get; set; } = "";
-} 

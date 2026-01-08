@@ -1,137 +1,60 @@
+using MathLLMBackend.Core.Constants;
 using MathLLMBackend.Core.Services.ChatService;
-using MathLLMBackend.Core.Services.ProblemsService;
 using MathLLMBackend.Domain.Entities;
-using MathLLMBackend.Domain.Enums;
-using Microsoft.AspNetCore.Mvc;
+using MathLLMBackend.Presentation.Binders;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using MathLLMBackend.Presentation.Dtos.Chats;
-using Microsoft.AspNetCore.Identity;
-using MathLLMBackend.DataAccess.Contexts;
-using Microsoft.EntityFrameworkCore;
 
 namespace MathLLMBackend.Presentation.Controllers
 {
+    [Authorize]
     [Route("api/[controller]")]
     [ApiController]
     public class ChatController : ControllerBase
     {
         private readonly IChatService _chatService;
         private readonly ILogger<ChatController> _logger;
-        private readonly UserManager<ApplicationUser> _userManager;
-        private readonly AppDbContext _context;
 
-        public ChatController(IChatService chatService, ILogger<ChatController> logger, UserManager<ApplicationUser> userManager, AppDbContext context)
+        public ChatController(IChatService chatService, ILogger<ChatController> logger)
         {
             _chatService = chatService;
             _logger = logger;
-            _userManager = userManager;
-            _context = context;
         }
 
         [HttpPost("create")]
-        [Authorize]
-        public async Task<IActionResult> CreateChat([FromBody] CreateChatRequestDto dto, CancellationToken ct)
+        public async Task<IActionResult> CreateChat([FromBody] CreateChatRequestDto dto, [FromUserId] string userId, CancellationToken ct)
         {
-            var userId = _userManager.GetUserId(User);
-            if (userId is null)
-            {
-                return Unauthorized();
-            }
-            
-            // TODO: refactor move logic to service
             var chat = new Chat(dto.Name, userId);
-
-            if (dto.ProblemHash is null)
-            {
-                await _chatService.Create(chat, ct);
-            }
-            else
-            {
-                await _chatService.Create(chat, dto.ProblemHash, 0, ct);
-            }
+            var createdChat = dto.ProblemHash == null
+                ? await _chatService.Create(chat, ct)
+                : await _chatService.Create(chat, dto.ProblemHash, TaskTypes.Default, ct);
             
             return Ok(
-                new ChatDto(chat.Id, chat.Name, chat.Type.ToString(), null, null)
+                new ChatDto(createdChat.Id, createdChat.Name, createdChat.Type?.ToString() ?? ChatConstants.DefaultChatTypeName, null, null)
             );
             
         }
         
         [HttpGet("get")]
-        [Authorize]
-        public async Task<IActionResult> GetChats(CancellationToken ct)
+        public async Task<IActionResult> GetChats([FromUserId] string userId, CancellationToken ct)
         {
-            var userId = _userManager.GetUserId(User);
-            if (userId is null)
-            {
-                return Unauthorized();
-            }
-            
             var chats = await _chatService.GetUserChats(userId, ct);
-            return Ok(chats.Select(c => new ChatDto(c.Id, c.Name, c.Type?.ToString() ?? "Chat", null, null)).ToList());
+            return Ok(chats.Select(c => new ChatDto(c.Id, c.Name, c.Type?.ToString() ?? ChatConstants.DefaultChatTypeName, null, null)).ToList());
         }
 
         [HttpGet("get/{chatId:guid}")]
-        [Authorize]
-        public async Task<IActionResult> GetChatDetails(Guid chatId, CancellationToken ct)
+        public async Task<IActionResult> GetChatDetails(Guid chatId, [FromUserId] string userId, CancellationToken ct)
         {
-            var chat = await _chatService.GetChatById(chatId, ct);
-            if (chat == null)
-            {
-                _logger.LogWarning("Chat with ID {ChatId} not found when trying to get details.", chatId);
-                return NotFound();
-            }
-
-            int? taskType = null;
-            string? theoryLink = null;
-            if (chat.Type == ChatType.ProblemSolver)
-            {
-                var userTask = await _context.UserTasks
-                                             .AsNoTracking()
-                                             .FirstOrDefaultAsync(ut => ut.AssociatedChatId == chatId, ct);
-                if (userTask != null)
-                {
-                    taskType = userTask.TaskType;
-                    // Get theory link from problem
-                    try
-                    {
-                        var problemsService = HttpContext.RequestServices.GetRequiredService<IProblemsService>();
-                        var problem = await problemsService.GetProblemFromDbAsync(userTask.ProblemId, ct);
-                        theoryLink = problem?.TheoryLink;
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogWarning(ex, "Failed to get theory link for problem {ProblemId}", userTask.ProblemId);
-                    }
-                }
-            }
-
-            return Ok(new ChatDto(chat.Id, chat.Name, chat.Type?.ToString() ?? "Chat", taskType, theoryLink));
+            var details = await _chatService.GetChatDetailsAsync(chatId, userId, ct);
+            var chat = await _chatService.GetChatByIdForUser(chatId, userId, ct);
+            return Ok(new ChatDto(chat.Id, chat.Name, chat.Type?.ToString() ?? ChatConstants.DefaultChatTypeName, details.TaskType, details.TheoryLink));
         }
 
         [HttpPost("delete/{id}")]
-        [Authorize]
-        public async Task<IActionResult> DeleteChat(Guid id, CancellationToken ct)
+        public async Task<IActionResult> DeleteChat(Guid id, [FromUserId] string userId, CancellationToken ct)
         {
-            var userId = _userManager.GetUserId(User);
-            if (userId is null)
-            {
-                return Unauthorized();
-            }
-            
-            var chat = await _chatService.GetChatById(id, ct);
-
-            if (chat is null)
-            {
-                return NotFound();
-            }
-            
-            if (chat.User.Id != userId)
-            {
-                return Unauthorized();
-            }
-            
-            await _chatService.Delete(chat, ct);
-            
+            await _chatService.DeleteChat(id, userId, ct);
             return Ok();
         }
     }

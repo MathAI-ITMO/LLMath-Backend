@@ -22,15 +22,7 @@ var logger = LogManager.Setup().LoadConfigurationFromAppSettings().GetCurrentCla
 
 try
 {
-    // Устанавливаем минимальное количество рабочих потоков и потоков завершения IOCP
-    // Значения подбираются экспериментально. Например:
-    int minWorkerThreads = 100; 
-    int minCompletionPortThreads = 100; 
-    ThreadPool.SetMinThreads(minWorkerThreads, minCompletionPortThreads);
-
     var builder = WebApplication.CreateBuilder(args);
-    // Загружаем секретные настройки (не фиксированы в репозитории)
-    builder.Configuration.AddJsonFile("appsettings.Secrets.json", optional: true, reloadOnChange: true);
     builder.Services.AddHttpLogging(o => { });
     var configuration = builder.Configuration;
     var corsConfiguration = configuration.GetSection(nameof(CorsConfiguration)).Get<CorsConfiguration>() ?? new CorsConfiguration();
@@ -67,7 +59,11 @@ try
     
     builder.Services.AddAuthorization();
 
-    builder.Services.AddControllers();
+    builder.Services.AddControllers(options =>
+    {
+        const int firstBinderIndex = 0;
+        options.ModelBinderProviders.Insert(firstBinderIndex, new MathLLMBackend.Presentation.Binders.UserIdModelBinderProvider());
+    });
     builder.Services.AddEndpointsApiExplorer();
     
     builder.Services.ConfigureApplicationCookie(options =>
@@ -110,6 +106,7 @@ try
             };
 
             c.AddSecurityRequirement(openApiSecurityRequirement);
+            c.OperationFilter<FromUserIdOperationFilter>();
         });
 
     var app = builder.Build();
@@ -132,7 +129,7 @@ try
     }
 
     app.MapIdentityApi<ApplicationUser>();
-    app.UseMiddleware<ExceptionHandlingMiddleware>();
+    app.UseMiddleware<GlobalExceptionHandlerMiddleware>();
     app.UseAuthentication();
     app.UseAuthorization();
     app.MapControllers();

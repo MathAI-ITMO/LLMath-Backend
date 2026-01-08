@@ -1,8 +1,8 @@
+using MathLLMBackend.Core.Constants;
 using MathLLMBackend.GeolinClient;
 using MathLLMBackend.GeolinClient.Models;
 using MathLLMBackend.ProblemsClient;
 using MathLLMBackend.ProblemsClient.Models;
-using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Logging;
 using Refit;
 
@@ -44,7 +44,7 @@ public class ProblemsService : IProblemsService
                     {
                         Hash = problemHash,
                         Seed = seed,
-                        Lang = "ru"
+                        Lang = LocalizationConstants.RussianLanguageCode
                     });
                 var problemMongo = new ProblemRequest()
                 {
@@ -57,12 +57,12 @@ public class ProblemsService : IProblemsService
                 };
                 var createdProblem = await _problemsApi.CreateProblem(problemMongo);
                 result.Add(createdProblem);
-                var tmp = await _problemsApi.GiveANameProblem(new ProblemWithNameRequest()
+                
+                await _problemsApi.GiveANameProblem(new ProblemWithNameRequest()
                 {
                     Name = name,
                     ProblemId = createdProblem.Id
-                }
-                );
+                });
             }
             return result;
         }
@@ -79,12 +79,12 @@ public class ProblemsService : IProblemsService
             var problems = await _problemsApi.GetAllProblemsByName(name);
             return problems;
         }
+        catch (ApiException apiEx) when (apiEx.StatusCode == System.Net.HttpStatusCode.NotFound)
+        {
+            return new List<Problem>();
+        }
         catch (Exception ex)
         {
-            if (ex.Message.Contains("404 (Not Found)"))
-            {
-                return new List<Problem>();
-            }
             _logger.LogError(ex, "Error fetching problems by name {name} from external problems service: {message}", name, ex.Message);
             throw;
         }  
@@ -96,12 +96,12 @@ public class ProblemsService : IProblemsService
             var problems = await _problemsApi.GetProblemsByType(typeName);
             return problems;
         }
+        catch (ApiException apiEx) when (apiEx.StatusCode == System.Net.HttpStatusCode.NotFound)
+        {
+            return new List<Problem>();
+        }
         catch (Exception ex)
         {
-            if (ex.Message.Contains("404"))
-            {
-                return new List<Problem>();
-            }
             _logger.LogError(ex, "Error fetching problems by type {typeName} from external problems service: {message}", typeName, ex.Message);
             throw;
         }  

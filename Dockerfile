@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /App
 
 COPY *.sln .
@@ -18,16 +18,16 @@ COPY src/MathLLMBackend.Domain/MathLLMBackend.Domain.csproj ./src/MathLLMBackend
 COPY src/MathLLMBackend.GeolinClient/MathLLMBackend.GeolinClient.csproj ./src/MathLLMBackend.GeolinClient/
 COPY src/MathLLMBackend.ProblemsClient/MathLLMBackend.ProblemsClient.csproj ./src/MathLLMBackend.ProblemsClient/
 
-RUN dotnet restore
+RUN dotnet restore src/MathLLMBackend.Presentation/MathLLMBackend.Presentation.csproj
 
 COPY . .
 
 RUN dotnet build src/MathLLMBackend.Presentation/MathLLMBackend.Presentation.csproj -c Release -o /App/out
 
-FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS final
+FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
 WORKDIR /App
 
-RUN adduser --disabled-password --gecos "" appuser && chown -R appuser /App
+RUN useradd -m -s /bin/bash appuser && chown -R appuser /App
 USER appuser
 
 COPY --from=build --chown=appuser:appuser /App/out .

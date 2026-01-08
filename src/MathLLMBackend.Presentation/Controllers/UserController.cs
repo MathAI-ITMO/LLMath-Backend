@@ -1,4 +1,5 @@
 using MathLLMBackend.Domain.Entities;
+using MathLLMBackend.Presentation.Binders;
 using MathLLMBackend.Presentation.Dtos.Common;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -6,6 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace MathLLMBackend.Presentation.Controllers
 {
+    [Authorize]
     [Route("api/[controller]")]
     [ApiController]
     public class UserController : ControllerBase
@@ -20,15 +22,8 @@ namespace MathLLMBackend.Presentation.Controllers
         }
 
         [HttpGet("me")]
-        [Authorize]
-        public async Task<IActionResult> GetCurrentUser()
+        public async Task<IActionResult> GetCurrentUser([FromUserId] string userId)
         {
-            var userId = _userManager.GetUserId(User);
-            if (userId == null)
-            {
-                return Unauthorized();
-            }
-
             var user = await _userManager.FindByIdAsync(userId);
             if (user == null)
             {
