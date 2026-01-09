@@ -77,7 +77,6 @@ public class AppDbContext : IdentityDbContext<ApplicationUser>
             .Property(u => u.StudentGroup)
             .HasMaxLength(20);
             
-        // Конфигурация для UserTask
         modelBuilder.Entity<UserTask>(entity =>
         {
             entity.HasKey(ut => ut.Id);
@@ -87,21 +86,17 @@ public class AppDbContext : IdentityDbContext<ApplicationUser>
             entity.Property(ut => ut.DisplayName).IsRequired().HasMaxLength(1024);
             entity.Property(ut => ut.TaskType).IsRequired();
             entity.Property(ut => ut.Status).IsRequired();
-            entity.Property(ut => ut.AssociatedChatId); // Nullable по умолчанию
+            entity.Property(ut => ut.AssociatedChatId);
 
-            // Связь с ApplicationUser
             entity.HasOne(ut => ut.ApplicationUser)
-                  .WithMany() // У пользователя может быть много задач
+                  .WithMany()
                   .HasForeignKey(ut => ut.ApplicationUserId)
-                  .OnDelete(DeleteBehavior.Cascade); // Удалять задачи пользователя при удалении пользователя
+                  .OnDelete(DeleteBehavior.Cascade);
 
-            // Индексы для ускорения запросов
             entity.HasIndex(ut => ut.ApplicationUserId);
             entity.HasIndex(ut => new { ut.ApplicationUserId, ut.TaskType });
             entity.HasIndex(ut => ut.ProblemId);
-            entity.HasIndex(ut => ut.AssociatedChatId).IsUnique(false); // Может быть null или повторяться, если переделывать задачи?
-                                                                         // Если чат уникален для задачи, то .IsUnique() - но AssociatedChatId nullable.
-                                                                         // Пока оставим неуникальный индекс.
+            entity.HasIndex(ut => ut.AssociatedChatId).IsUnique(false);
         });
     }
 }

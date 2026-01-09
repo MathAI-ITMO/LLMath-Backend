@@ -49,7 +49,7 @@ public class UserTasksControllerTests : BaseIntegrationTest
         await CreateAndLoginUserAsync();
         var response = await AuthenticatedPostAsync("/api/usertasks/00000000-0000-0000-0000-000000000000/start");
 
-        response.StatusCode.Should().BeOneOf(HttpStatusCode.NotFound, HttpStatusCode.InternalServerError);
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     [Fact]

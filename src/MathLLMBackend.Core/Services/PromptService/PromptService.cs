@@ -4,14 +4,9 @@ using Microsoft.Extensions.Options;
 
 namespace MathLLMBackend.Core.Services.PromptService;
 
-public class PromptService : IPromptService
+public class PromptService(IOptions<PromptConfiguration> promptConfiguration) : IPromptService
 {
-    private readonly PromptConfiguration _promptConfiguration;
-
-    public PromptService(IOptions<PromptConfiguration> promptConfiguration)
-    {
-        _promptConfiguration = promptConfiguration.Value;
-    }
+    private readonly PromptConfiguration _promptConfiguration = promptConfiguration.Value;
 
     public string GetTutorSystemPrompt()
     {
@@ -69,10 +64,6 @@ public class PromptService : IPromptService
         return _promptConfiguration.TutorInitialPrompt;
     }
     
-    /// <summary>
-    /// Gets the learning initial prompt. Note: condition and firstStep parameters are currently unused
-    /// but kept for interface consistency and potential future use.
-    /// </summary>
     public string GetLearningInitialPrompt(string condition, string firstStep)
     {
         // TODO: Consider using condition and firstStep parameters if prompt template supports placeholders

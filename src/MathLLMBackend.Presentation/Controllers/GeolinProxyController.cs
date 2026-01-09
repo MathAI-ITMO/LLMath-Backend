@@ -1,12 +1,13 @@
 using MathLLMBackend.Core.Services.GeolinService;
 using MathLLMBackend.Presentation.Dtos.Geolin;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Refit;
 
 namespace MathLLMBackend.Presentation.Controllers
 {
     [ApiController]
     [Route("api/v1/geolin-proxy")]
+    [Authorize]
     public class GeolinProxyController : ControllerBase
     {
         private readonly IGeolinService _geolinService;
@@ -27,37 +28,18 @@ namespace MathLLMBackend.Presentation.Controllers
                 return BadRequest(new GeolinProblemDataResponse { Error = "Prefix cannot be empty." });
             }
 
-            try
+            var problemData = await _geolinService.GetProblemDataByPrefixAsync(prefix, seed, ct);
+            
+            var response = new GeolinProblemDataResponse
             {
-                var problemData = await _geolinService.GetProblemDataByPrefixAsync(prefix, seed, ct);
-                
-                var response = new GeolinProblemDataResponse
-                {
-                    Name = problemData.Name,
-                    Hash = problemData.Hash,
-                    Condition = problemData.Condition,
-                    Seed = problemData.Seed,
-                    ProblemParams = problemData.ProblemParams
-                };
+                Name = problemData.Name,
+                Hash = problemData.Hash,
+                Condition = problemData.Condition,
+                Seed = problemData.Seed,
+                ProblemParams = problemData.ProblemParams
+            };
 
-                return Ok(response);
-            }
-            catch (InvalidOperationException ex)
-            {
-                if (ex.Message.Contains("No problem found"))
-                {
-                    return NotFound(new GeolinProblemDataResponse { Error = ex.Message });
-                }
-                return StatusCode(StatusCodes.Status500InternalServerError, new GeolinProblemDataResponse { Error = ex.Message });
-            }
-            catch (ApiException ex)
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, new GeolinProblemDataResponse { Error = $"GeoLin API error: {ex.Message}" });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, new GeolinProblemDataResponse { Error = $"Error: {ex.Message}" });
-            }
+            return Ok(response);
         }
 
         //TODO: Эту функцию надо заменить после того как сервис LLMath-Problems научится верифицировать решения задач
@@ -86,58 +68,25 @@ namespace MathLLMBackend.Presentation.Controllers
                 });
             }
 
-            try
-            {
-                var result = await _geolinService.CheckAnswerAsync(
-                    request.Hash, 
-                    request.AnswerAttempt, 
-                    request.Seed, 
-                    request.ProblemParams, 
-                    ct);
+            var result = await _geolinService.CheckAnswerAsync(
+                request.Hash, 
+                request.AnswerAttempt, 
+                request.Seed, 
+                request.ProblemParams, 
+                ct);
 
-                var response = new CheckAnswerResponse
-                {
-                    IsCorrect = result.IsCorrect,
-                    Message = result.IsCorrect 
-                        ? $"Ответ правильный (verdict: {result.Verdict})" 
-                        : $"Ответ неправильный (verdict: {result.Verdict})",
-                    Hash = request.Hash,
-                    AnswerAttempt = request.AnswerAttempt,
-                    Seed = request.Seed
-                };
+            var response = new CheckAnswerResponse
+            {
+                IsCorrect = result.IsCorrect,
+                Message = result.IsCorrect 
+                    ? $"Ответ правильный (verdict: {result.Verdict})" 
+                    : $"Ответ неправильный (verdict: {result.Verdict})",
+                Hash = request.Hash,
+                AnswerAttempt = request.AnswerAttempt,
+                Seed = request.Seed
+            };
 
-                return Ok(response);
-            }
-            catch (InvalidOperationException ex)
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, new CheckAnswerResponse 
-                { 
-                    Error = ex.Message,
-                    Hash = request.Hash,
-                    AnswerAttempt = request.AnswerAttempt,
-                    Seed = request.Seed
-                });
-            }
-            catch (HttpRequestException ex)
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, new CheckAnswerResponse 
-                { 
-                    Error = ex.Message,
-                    Hash = request.Hash,
-                    AnswerAttempt = request.AnswerAttempt,
-                    Seed = request.Seed
-                });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, new CheckAnswerResponse 
-                { 
-                    Error = $"Error: {ex.Message}",
-                    Hash = request.Hash,
-                    AnswerAttempt = request.AnswerAttempt,
-                    Seed = request.Seed
-                });
-            }
+            return Ok(response);
         }
     }
 } 

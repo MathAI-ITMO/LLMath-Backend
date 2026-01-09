@@ -5,14 +5,14 @@ using MathLLMBackend.Core.Services.GeolinService;
 using MathLLMBackend.Core.Services.LlmService;
 using MathLLMBackend.Core.Services.PromptService;
 using MathLLMBackend.Core.Services.ProblemsService;
-using MathLLMBackend.Core.Services.StatsService;
 using MathLLMBackend.Core.Services;
+using MathLLMBackend.Core.Services.StatsService;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace MathLLMBackend.Core;
 
-public class CoreServicesRegistrar
+public static class CoreServicesRegistrar
 {
     public static IServiceCollection Configure(IServiceCollection services, ConfigurationManager configuration)
     {
@@ -23,12 +23,10 @@ public class CoreServicesRegistrar
         services.AddTransient<IGeolinService, GeolinService>();
         services.AddTransient<IProblemsService, ProblemsService>();
         services.AddTransient<IUserTaskService, UserTaskService>();
-        services.AddTransient<ILlmLoggingService, LlmLoggingService>();
         services.AddTransient<IStatsService, StatsService>();
         
         services.Configure<LlmServiceConfiguration>(configuration.GetSection("OpenAi"));
         services.Configure<PromptConfiguration>(configuration.GetSection("DefaultPrompts"));
-        services.Configure<LlmLoggingConfiguration>(configuration.GetSection("LlmLogging"));
         
         return services;
     }

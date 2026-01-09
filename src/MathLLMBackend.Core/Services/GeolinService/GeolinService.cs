@@ -12,17 +12,14 @@ namespace MathLLMBackend.Core.Services.GeolinService;
 public class GeolinService : IGeolinService
 {
     private readonly IGeolinApi _geolinApi;
-    private readonly ILogger<GeolinService> _logger;
     private readonly GeolinClientOptions _options;
     private readonly Random _random = new();
 
     public GeolinService(
         IGeolinApi geolinApi, 
-        ILogger<GeolinService> logger,
         IOptions<GeolinClientOptions> geolinOptions)
     {
         _geolinApi = geolinApi;
-        _logger = logger;
         _options = geolinOptions.Value;
     }
 
@@ -79,7 +76,7 @@ public class GeolinService : IGeolinService
     {
         var problemPage = await _geolinApi.GetProblemsInfo(page: 1, size: 10, prefixName: prefix);
         
-        if (problemPage?.Problems == null || problemPage.Problems.Count == 0)
+        if (problemPage.Problems.Count == 0)
         {
             return null;
         }
@@ -132,7 +129,6 @@ public class GeolinService : IGeolinService
         }
         catch (JsonException)
         {
-            // Ignore parse errors, return null
         }
 
         return null;

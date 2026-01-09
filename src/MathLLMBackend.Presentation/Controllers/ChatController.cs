@@ -54,7 +54,7 @@ namespace MathLLMBackend.Presentation.Controllers
         [HttpPost("delete/{id}")]
         public async Task<IActionResult> DeleteChat(Guid id, [FromUserId] string userId, CancellationToken ct)
         {
-            await _chatService.DeleteChat(id, userId, ct);
+            await _chatService.Delete(id, userId, ct);
             return Ok();
         }
     }

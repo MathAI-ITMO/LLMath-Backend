@@ -9,36 +9,29 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MathLLMBackend.ProblemsClient.Models;
 using MathLLMBackend.Core.Services.ProblemsService;
+using MathLLMBackend.Domain.Exceptions;
 using Microsoft.Extensions.Configuration;
 
 namespace MathLLMBackend.Core.Services;
 
-public class UserTaskService : IUserTaskService
+public class UserTaskService(
+    AppDbContext context,
+    IProblemsService problemsService,
+    IChatService chatService,
+    ILogger<UserTaskService> logger,
+    IConfiguration configuration)
+    : IUserTaskService
 {
-    private readonly AppDbContext _context;
-    private readonly IProblemsService _problemsService;
-    private readonly IChatService _chatService;
-    private readonly ILogger<UserTaskService> _logger;
-    private readonly Dictionary<string, string> _taskModeTitles;
-
-    public UserTaskService(
-        AppDbContext context,
-        IProblemsService problemsService,
-        IChatService chatService,
-        ILogger<UserTaskService> logger,
-        IConfiguration configuration)
-    {
-        _context = context;
-        _problemsService = problemsService;
-        _chatService = chatService;
-        _logger = logger;
-        _taskModeTitles = configuration.GetSection("TaskModeTitles").Get<Dictionary<string, string>>() 
-            ?? new Dictionary<string, string>();
-    }
+    private readonly AppDbContext _context = context;
+    private readonly IProblemsService _problemsService = problemsService;
+    private readonly IChatService _chatService = chatService;
+    private readonly ILogger<UserTaskService> _logger = logger;
+    private readonly Dictionary<string, string> _taskModeTitles = configuration.GetSection("TaskModeTitles").Get<Dictionary<string, string>>() 
+                                                                  ?? new Dictionary<string, string>();
 
     public async Task<IEnumerable<UserTask>> GetOrCreateUserTasksAsync(string userId, int taskType, CancellationToken cancellationToken = default)
     {
-        if (!_taskModeTitles.TryGetValue(taskType.ToString(), out var typeName) || typeName == null)
+        if (!_taskModeTitles.TryGetValue(taskType.ToString(), out var typeName))
         {
             _logger.LogWarning("Task type {TaskType} is not configured in TaskModeTitles. Returning empty tasks.", taskType);
             return Enumerable.Empty<UserTask>();
@@ -46,21 +39,21 @@ public class UserTaskService : IUserTaskService
 
         _logger.LogInformation("Fetching problems of type '{TypeName}' (taskType={TaskType}) from LLMath-Problems for user {UserId}", typeName, taskType, userId);
 
-        List<ProblemsClient.Models.Problem> problemsFromDb;
+        var problemsFromDb = new List<Problem>();
         try
         {
             problemsFromDb = await _problemsService.GetSavedProblemsByTypes(typeName, cancellationToken);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error fetching problems of type '{TypeName}' from LLMath-Problems service.", typeName);
+            _logger.LogError(ex, "Error fetching problems from LLMath-Problems for user {UserId}", userId);
             return Enumerable.Empty<UserTask>();
         }
 
-        if (problemsFromDb == null || !problemsFromDb.Any())
+        if (problemsFromDb.Count == 0)
         {
             _logger.LogInformation("No problems of type '{TypeName}' found in LLMath-Problems database.", typeName);
-            return Enumerable.Empty<UserTask>();
+            return [];
         }
 
         var newOrExistingUserTasks = new List<UserTask>();
@@ -115,10 +108,9 @@ public class UserTaskService : IUserTaskService
         var userTask = await GetUserTaskByIdAsync(userTaskId, userId, cancellationToken);
         if (userTask == null)
         {
-            throw new InvalidOperationException($"Task not found or you don't have permission.");
+            throw new NotFoundException($"Task not found or you don't have permission.");
         }
 
-        // If chat already associated, just confirm and return
         if (userTask.AssociatedChatId.HasValue && userTask.AssociatedChatId != Guid.Empty)
         {
             _logger.LogInformation("Task {UserTaskId} already associated with chat {ChatId}. Returning current state.", userTaskId, userTask.AssociatedChatId);
@@ -126,7 +118,6 @@ public class UserTaskService : IUserTaskService
             return confirmedTask ?? throw new InvalidOperationException("Failed to confirm task state.");
         }
 
-        // Create or get chat for this task
         var chatId = await _chatService.GetOrCreateProblemChatAsync(
             userTask.ProblemHash, 
             userId, 
@@ -139,7 +130,6 @@ public class UserTaskService : IUserTaskService
             throw new InvalidOperationException("Failed to obtain a valid chat ID.");
         }
 
-        // Update task status and associate with chat
         var updatedTask = await StartTaskAsync(userTaskId, chatId, userId, cancellationToken);
         if (updatedTask == null)
         {

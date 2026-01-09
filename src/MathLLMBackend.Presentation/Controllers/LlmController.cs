@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace MathLLMBackend.Presentation.Controllers;
 
 [Route("api/v1/[controller]")]
+[Authorize]
 [ApiController]
 public class LlmController : ControllerBase
 {
@@ -19,9 +20,6 @@ public class LlmController : ControllerBase
         _logger = logger;
     }
 
-    /// <summary>
-    /// Решает математическую задачу с помощью LLM
-    /// </summary>
     [HttpPost("solve-problem")]
     public async Task<IActionResult> SolveProblem([FromBody] SolveProblemRequest request, CancellationToken ct)
     {
@@ -30,22 +28,11 @@ public class LlmController : ControllerBase
             return BadRequest("Problem description cannot be empty");
         }
 
-        try
-        {
-            _logger.LogInformation("Solving problem using LLM: {Problem}", request.ProblemDescription);
-            var solution = await _llmService.SolveProblem(request.ProblemDescription, ct);
-            return Ok(new SolveProblemResponse { Solution = solution });
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error solving problem with LLM");
-            return StatusCode(StatusCodes.Status500InternalServerError, "Error solving problem: " + ex.Message);
-        }
+        _logger.LogInformation("Solving problem using LLM: {Problem}", request.ProblemDescription);
+        var solution = await _llmService.SolveProblem(request.ProblemDescription, ct);
+        return Ok(new SolveProblemResponse { Solution = solution });
     }
 
-    /// <summary>
-    /// Извлекает финальный ответ из готового решения задачи
-    /// </summary>
     [HttpPost("extract-answer")]
     public async Task<IActionResult> ExtractAnswer([FromBody] ExtractAnswerRequest request, CancellationToken ct)
     {
@@ -64,23 +51,14 @@ public class LlmController : ControllerBase
             return BadRequest("Solution cannot be empty");
         }
 
-        try
-        {
-            _logger.LogInformation("Extracting answer from solution for problem. ProblemStatement preview: {ProblemPreview}", 
-                request.ProblemStatement.Substring(0, Math.Min(MessageConstants.Logging.MaxProblemPreviewLength, request.ProblemStatement.Length)));
-            _logger.LogInformation("Solution preview: {SolutionPreview}", 
-                request.Solution.Substring(0, Math.Min(MessageConstants.Logging.MaxSolutionPreviewLength, request.Solution.Length)));
-                
-            var extractedAnswer = await _llmService.ExtractAnswer(request.ProblemStatement, request.Solution, ct);
+        _logger.LogInformation("Extracting answer from solution for problem. ProblemStatement preview: {ProblemPreview}", 
+            request.ProblemStatement.Substring(0, Math.Min(MessageConstants.Logging.MaxProblemPreviewLength, request.ProblemStatement.Length)));
+        _logger.LogInformation("Solution preview: {SolutionPreview}", 
+            request.Solution.Substring(0, Math.Min(MessageConstants.Logging.MaxSolutionPreviewLength, request.Solution.Length)));
             
-            _logger.LogInformation("Successfully extracted answer: {ExtractedAnswer}", extractedAnswer);
-            return Ok(new ExtractAnswerResponse { ExtractedAnswer = extractedAnswer });
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error extracting answer from solution. Exception type: {ExceptionType}, Message: {ExceptionMessage}", 
-                ex.GetType().Name, ex.Message);
-            return StatusCode(StatusCodes.Status500InternalServerError, "Error extracting answer: " + ex.Message);
-        }
+        var extractedAnswer = await _llmService.ExtractAnswer(request.ProblemStatement, request.Solution, ct);
+        
+        _logger.LogInformation("Successfully extracted answer: {ExtractedAnswer}", extractedAnswer);
+        return Ok(new ExtractAnswerResponse { ExtractedAnswer = extractedAnswer });
     }
 }

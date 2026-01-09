@@ -31,7 +31,6 @@ public class GeolinServiceTests
 
         _service = new GeolinService(
             _geolinApiMock.Object,
-            _loggerMock.Object,
             _optionsMock.Object);
     }
 

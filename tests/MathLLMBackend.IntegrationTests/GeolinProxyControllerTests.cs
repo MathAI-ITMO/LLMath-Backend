@@ -36,7 +36,7 @@ public class GeolinProxyControllerTests : BaseIntegrationTest
                 ProblemParams = "{}"
             });
 
-        var response = await Client.GetAsync("/api/v1/geolin-proxy/problem-data?prefix=test");
+        var response = await AuthenticatedGetAsync($"/api/v1/geolin-proxy/problem-data?prefix=test");
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
     }
@@ -44,7 +44,7 @@ public class GeolinProxyControllerTests : BaseIntegrationTest
     [Fact]
     public async Task GetProblemDataByPrefix_WithEmptyPrefix_ReturnsBadRequest()
     {
-        var response = await Client.GetAsync("/api/v1/geolin-proxy/problem-data?prefix=");
+        var response = await AuthenticatedGetAsync("/api/v1/geolin-proxy/problem-data?prefix=");
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
@@ -58,7 +58,7 @@ public class GeolinProxyControllerTests : BaseIntegrationTest
             AnswerAttempt = "42",
             Seed = 123
         };
-        var response = await Client.PostAsJsonAsync("/api/v1/geolin-proxy/check-answer-direct", request);
+        var response = await AuthenticatedPostAsync("/api/v1/geolin-proxy/check-answer-direct", request);
 
         response.StatusCode.Should().BeOneOf(HttpStatusCode.OK, HttpStatusCode.InternalServerError);
     }

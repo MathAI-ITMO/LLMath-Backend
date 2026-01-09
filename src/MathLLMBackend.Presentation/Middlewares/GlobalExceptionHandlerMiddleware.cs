@@ -47,7 +47,7 @@ public class GlobalExceptionHandlerMiddleware
             errorResponse.Detail = authEx.Message;
             _logger.LogInformation("Authorization exception: {Message}", authEx.Message);
         }
-        else if (exception is KeyNotFoundException notFoundEx)
+        else if (exception is NotFoundException notFoundEx)
         {
             response.StatusCode = (int)HttpStatusCode.NotFound;
             errorResponse.Status = response.StatusCode;
@@ -55,7 +55,7 @@ public class GlobalExceptionHandlerMiddleware
             errorResponse.Detail = notFoundEx.Message;
             _logger.LogInformation("Resource not found: {Message}", notFoundEx.Message);
         }
-        else if (exception is ArgumentException || exception is ArgumentNullException)
+        else if (exception is ArgumentException or ArgumentNullException)
         {
             response.StatusCode = (int)HttpStatusCode.BadRequest;
             errorResponse.Status = response.StatusCode;

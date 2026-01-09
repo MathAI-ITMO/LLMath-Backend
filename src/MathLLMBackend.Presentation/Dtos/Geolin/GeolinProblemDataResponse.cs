@@ -9,7 +9,5 @@ public class GeolinProblemDataResponse
     public string? Condition { get; set; }
     public int? Seed { get; set; }
     public string? Error { get; set; }
-    
-    [JsonPropertyName("problemParams")]
     public string? ProblemParams { get; set; }
 }

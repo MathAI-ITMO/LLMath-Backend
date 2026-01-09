@@ -1,4 +1,5 @@
 using MathLLMBackend.Core.Services.AuthService;
+using MathLLMBackend.Domain.Constants;
 using MathLLMBackend.Presentation.Dtos.Auth;
 using MathLLMBackend.Presentation.Dtos.Common;
 using Microsoft.AspNetCore.Mvc;
@@ -39,12 +40,12 @@ namespace MathLLMBackend.Presentation.Controllers
                     user.Email ?? string.Empty,
                     user.FirstName,
                     user.LastName,
-                    user.StudentGroup));
+                    user.StudentGroup,
+                    RoleConstants.User));
             }
             catch (InvalidOperationException ex)
             {
                 var errorMessage = ex.Message;
-                var isDuplicate = errorMessage.Contains("уже существует");
                 
                 return BadRequest(new 
                 {
@@ -53,10 +54,7 @@ namespace MathLLMBackend.Presentation.Controllers
                         { "", new[] { errorMessage } }
                     },
                     title = "Ошибка регистрации",
-                    status = StatusCodes.Status400BadRequest,
-                    detail = isDuplicate 
-                        ? errorMessage 
-                        : "Не удалось создать аккаунт. Пожалуйста, исправьте ошибки и попробуйте снова."
+                    status = StatusCodes.Status400BadRequest
                 });
             }
         }

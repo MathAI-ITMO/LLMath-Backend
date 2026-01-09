@@ -15,39 +15,26 @@ public class UserTask
     public ApplicationUser ApplicationUser { get; set; } = null!;
 
     [Required]
-    [MaxLength(512)] // Идентификатор задачи, может быть длинным (например, из TASK_TYPES или хэш)
+    [MaxLength(512)]
     public string ProblemId { get; set; } = null!;
 
     [Required]
-    [MaxLength(1024)] // Название для отображения, может быть еще длиннее
+    [MaxLength(1024)]
     public string DisplayName { get; set; } = null!;
 
-    // Тип задачи, например: 
-    // 0 - Задачи из списка "Выбрать задачу" (инициализируются из TASK_TYPES)
-    // 1 - Случайная задача (если будет такой режим)
-    // 2 - Задачи из контрольной работы и т.д.
     [Required]
     public int TaskType { get; set; }
 
     [Required]
     public UserTaskStatus Status { get; set; }
 
-    public Guid? AssociatedChatId { get; set; } // Nullable Guid, ID связанного чата
-    // Если будет сущность Chat, можно добавить навигационное свойство:
-    // public Chat? AssociatedChat { get; set; }
-    // Но пока оставим только ID, чтобы не усложнять, если Chat не всегда связан напрямую или для гибкости
+    public Guid? AssociatedChatId { get; set; }
 
-    // Дополнительные поля, если нужны:
-    // public DateTime CreatedAt { get; set; }
-    // public DateTime UpdatedAt { get; set; }
-
-    public string ProblemHash { get; set; } = null!; // Хеш задачи из Geolin, добавлен для связи
+    public string ProblemHash { get; set; } = null!;
 
     public UserTask()
     {
         Id = Guid.NewGuid();
         Status = UserTaskStatus.NotStarted;
-        // CreatedAt = DateTime.UtcNow;
-        // UpdatedAt = DateTime.UtcNow;
     }
 } 
