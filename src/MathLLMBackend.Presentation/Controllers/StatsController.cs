@@ -52,8 +52,6 @@ public class StatsController : ControllerBase
     [HttpGet("user-details/{userId}")]
     public async Task<IActionResult> GetUserDetails(string userId, [FromUserId] string currentUserId, CancellationToken ct = default)
     {
-        // For now, only allow users to see their own details. 
-        // If admin functionality is needed later, this should be updated.
         if (userId != currentUserId)
         {
             return Forbid();

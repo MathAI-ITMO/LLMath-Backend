@@ -44,7 +44,6 @@ namespace MathLLMBackend.Presentation.Controllers
             catch (InvalidOperationException ex)
             {
                 var errorMessage = ex.Message;
-                var isDuplicate = errorMessage.Contains("уже существует");
                 
                 return BadRequest(new 
                 {
@@ -53,10 +52,7 @@ namespace MathLLMBackend.Presentation.Controllers
                         { "", new[] { errorMessage } }
                     },
                     title = "Ошибка регистрации",
-                    status = StatusCodes.Status400BadRequest,
-                    detail = isDuplicate 
-                        ? errorMessage 
-                        : "Не удалось создать аккаунт. Пожалуйста, исправьте ошибки и попробуйте снова."
+                    status = StatusCodes.Status400BadRequest
                 });
             }
         }
