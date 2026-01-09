@@ -2,6 +2,7 @@ using System.Net;
 using Xunit;
 using System.Net.Http.Json;
 using FluentAssertions;
+using MathLLMBackend.Domain.Constants;
 using MathLLMBackend.Presentation.Dtos.Auth;
 using MathLLMBackend.Presentation.Dtos.Common;
 
@@ -31,7 +32,7 @@ public class AuthControllerTests : BaseIntegrationTest
         var userInfo = await response.Content.ReadFromJsonAsync<UserInfoDto>();
         userInfo.Should().NotBeNull();
         userInfo!.Email.Should().Be(registerDto.Email);
-        userInfo.Role.Should().Be(MathLLMBackend.Domain.Constants.RoleConstants.User);
+        userInfo.Role.Should().Be(Role.User);
     }
 
     [Fact]

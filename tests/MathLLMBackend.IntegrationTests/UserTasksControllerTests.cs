@@ -94,7 +94,7 @@ public class UserTasksControllerTests : BaseIntegrationTest
             });
 
         Factory.LlmServiceMock
-            .Setup(x => x.GenerateNextMessageAsync(It.IsAny<List<MathLLMBackend.Domain.Entities.Message>>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.GenerateNextMessageAsync(It.IsAny<List<MathLLMBackend.Domain.Entities.Message>>(), It.IsAny<TaskType>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync("Test response");
 
         await CreateAndLoginUserAsync();
@@ -124,7 +124,7 @@ public class UserTasksControllerTests : BaseIntegrationTest
             ProblemId = "test-problem-id",
             ProblemHash = "test-problem-id",
             DisplayName = "Test Task",
-            TaskType = 1,
+            TaskType = TaskType.Learning,
             Status = MathLLMBackend.Domain.Enums.UserTaskStatus.InProgress
         };
         dbContext.UserTasks.Add(userTask);

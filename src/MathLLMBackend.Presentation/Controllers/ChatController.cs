@@ -2,6 +2,7 @@ using MathLLMBackend.Core.Constants;
 using MathLLMBackend.Core.Services.ChatService;
 using MathLLMBackend.Domain.Constants;
 using MathLLMBackend.Domain.Entities;
+using MathLLMBackend.Domain.Enums;
 using MathLLMBackend.Domain.Exceptions;
 using MathLLMBackend.Domain.Models;
 using MathLLMBackend.Presentation.Binders;
@@ -32,7 +33,7 @@ namespace MathLLMBackend.Presentation.Controllers
             var chat = new Chat(dto.Name, user.Id);
             var createdChat = dto.ProblemHash == null
                 ? await _chatService.Create(chat, ct)
-                : await _chatService.Create(chat, dto.ProblemHash, TaskTypes.Default, ct);
+                : await _chatService.Create(chat, dto.ProblemHash, TaskType.Default, ct);
             
             return Ok(
                 new ChatDto(createdChat.Id, createdChat.Name, createdChat.Type?.ToString() ?? ChatConstants.DefaultChatTypeName, null, null)
@@ -50,7 +51,7 @@ namespace MathLLMBackend.Presentation.Controllers
         [HttpGet("get/{chatId:guid}")]
         public async Task<IActionResult> GetChatDetails(Guid chatId, [FromJwt] JwtUser user, CancellationToken ct)
         {
-            var isAdmin = User.IsInRole(RoleConstants.Admin);
+            var isAdmin = User.IsInRole(Role.Admin);
             
             Chat chat;
             ChatDetailsModel details;

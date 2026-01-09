@@ -137,7 +137,7 @@ public class TestWebApplicationFactory : WebApplicationFactory<Program>
         };
 
         await userManager.CreateAsync(user, password);
-        await userManager.AddToRoleAsync(user, MathLLMBackend.Domain.Constants.RoleConstants.User);
+        await userManager.AddToRoleAsync(user, MathLLMBackend.Domain.Constants.Role.User);
         return user;
     }
 
@@ -148,9 +148,9 @@ public class TestWebApplicationFactory : WebApplicationFactory<Program>
         var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
         
         // Ensure admin role exists
-        if (!await roleManager.RoleExistsAsync(MathLLMBackend.Domain.Constants.RoleConstants.Admin))
+        if (!await roleManager.RoleExistsAsync(MathLLMBackend.Domain.Constants.Role.Admin))
         {
-            await roleManager.CreateAsync(new IdentityRole(MathLLMBackend.Domain.Constants.RoleConstants.Admin));
+            await roleManager.CreateAsync(new IdentityRole(MathLLMBackend.Domain.Constants.Role.Admin));
         }
         
         var user = new ApplicationUser
@@ -163,7 +163,7 @@ public class TestWebApplicationFactory : WebApplicationFactory<Program>
         };
 
         await userManager.CreateAsync(user, password);
-        await userManager.AddToRoleAsync(user, MathLLMBackend.Domain.Constants.RoleConstants.Admin);
+        await userManager.AddToRoleAsync(user, MathLLMBackend.Domain.Constants.Role.Admin);
         return user;
     }
 

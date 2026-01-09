@@ -18,35 +18,8 @@ namespace MathLLMBackend.Presentation.Controllers
             _geolinService = geolinService ?? throw new ArgumentNullException(nameof(geolinService));
         }
 
-        [HttpGet("problem-data")]
-        [Authorize(Roles = RoleConstants.Admin)]
-        public async Task<IActionResult> GetProblemDataByPrefix(
-            [FromQuery] string prefix, 
-            [FromQuery] int? seed = null,
-            CancellationToken ct = default)
-        {
-            if (string.IsNullOrWhiteSpace(prefix))
-            {
-                return BadRequest(new GeolinProblemDataResponse { Error = "Prefix cannot be empty." });
-            }
-
-            var problemData = await _geolinService.GetProblemDataByPrefixAsync(prefix, seed, ct);
-            
-            var response = new GeolinProblemDataResponse
-            {
-                Name = problemData.Name,
-                Hash = problemData.Hash,
-                Condition = problemData.Condition,
-                Seed = problemData.Seed,
-                ProblemParams = problemData.ProblemParams
-            };
-
-            return Ok(response);
-        }
-
-        //TODO: Эту функцию надо заменить после того как сервис LLMath-Problems научится верифицировать решения задач
         [HttpPost("check-answer-direct")]
-        [Authorize(Roles = RoleConstants.Admin)]
+        [Authorize(Roles = Role.Admin)]
         public async Task<IActionResult> CheckAnswerDirect([FromBody] CheckAnswerRequest request, CancellationToken ct = default)
         {
             if (string.IsNullOrWhiteSpace(request.Hash))

@@ -48,7 +48,7 @@ namespace MathLLMBackend.Presentation.Controllers
         [HttpGet("get-messages-from-chat")]
         public async Task<IActionResult> GetAllMessagesFromChat(Guid chatId, [FromJwt] JwtUser user, CancellationToken ct)
         {
-            var isAdmin = User.IsInRole(RoleConstants.Admin);
+            var isAdmin = User.IsInRole(Role.Admin);
             
             List<Message> messages;
             if (isAdmin)

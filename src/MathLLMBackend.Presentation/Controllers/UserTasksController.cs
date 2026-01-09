@@ -1,5 +1,5 @@
-using MathLLMBackend.Core.Constants;
 using MathLLMBackend.Core.Services;
+using MathLLMBackend.Domain.Enums;
 using MathLLMBackend.Presentation.Dtos.Tasks;
 using MathLLMBackend.Presentation.Binders;
 using MathLLMBackend.Presentation.Models;
@@ -28,7 +28,7 @@ public class UserTasksController : ControllerBase
     [ProducesResponseType(typeof(IEnumerable<UserTaskDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    public async Task<IActionResult> GetUserTasks([FromJwt] JwtUser user, [FromQuery] int taskType = TaskTypes.Default)
+    public async Task<IActionResult> GetUserTasks([FromJwt] JwtUser user, [FromQuery] TaskType taskType = TaskType.Default)
     {
         var tasks = await _userTaskService.GetOrCreateUserTasksAsync(user.Id, taskType, HttpContext.RequestAborted);
         var dtos = tasks.Select(t => new UserTaskDto(

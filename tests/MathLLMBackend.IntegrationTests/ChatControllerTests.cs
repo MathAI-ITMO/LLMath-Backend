@@ -176,7 +176,7 @@ public class ChatControllerTests : BaseIntegrationTest
             });
 
         Factory.LlmServiceMock
-            .Setup(x => x.GenerateNextMessageAsync(It.IsAny<List<Message>>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.GenerateNextMessageAsync(It.IsAny<List<Message>>(), It.IsAny<TaskType>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync("Test response");
 
         await CreateAndLoginUserAsync();
@@ -201,7 +201,7 @@ public class ChatControllerTests : BaseIntegrationTest
             });
 
         Factory.LlmServiceMock
-            .Setup(x => x.GenerateNextMessageAsync(It.IsAny<List<Message>>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.GenerateNextMessageAsync(It.IsAny<List<Message>>(), It.IsAny<TaskType>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync("Test response");
 
         await CreateAndLoginUserAsync();
@@ -216,7 +216,7 @@ public class ChatControllerTests : BaseIntegrationTest
                 ProblemId = problemId,
                 ProblemHash = problemId,
                 DisplayName = "Test Task",
-                TaskType = 1,
+                TaskType = TaskType.Learning,
                 Status = UserTaskStatus.InProgress
             };
             dbContext1.UserTasks.Add(userTask);
@@ -228,7 +228,7 @@ public class ChatControllerTests : BaseIntegrationTest
             var chatService = scope2.ServiceProvider.GetRequiredService<MathLLMBackend.Core.Services.ChatService.IChatService>();
             var chat = new Chat($"Test ProblemSolver Chat {Guid.NewGuid()}", TestUser!.Id);
             
-            var createdChat = await chatService.Create(chat, problemId, 3, CancellationToken.None);
+            var createdChat = await chatService.Create(chat, problemId, TaskType.Exam, CancellationToken.None);
             createdChat.Id.Should().NotBe(Guid.Empty);
             
             var dbContext2 = scope2.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -254,7 +254,7 @@ public class ChatControllerTests : BaseIntegrationTest
             });
 
         Factory.LlmServiceMock
-            .Setup(x => x.GenerateNextMessageAsync(It.IsAny<List<Message>>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.GenerateNextMessageAsync(It.IsAny<List<Message>>(), It.IsAny<TaskType>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync("Test response");
 
         await CreateAndLoginUserAsync();
@@ -264,7 +264,7 @@ public class ChatControllerTests : BaseIntegrationTest
             var chatService = scope.ServiceProvider.GetRequiredService<MathLLMBackend.Core.Services.ChatService.IChatService>();
             var chat = new Chat($"Test ProblemSolver Chat {Guid.NewGuid()}", TestUser!.Id);
             
-            var createdChat = await chatService.Create(chat, problemId, 3, CancellationToken.None);
+            var createdChat = await chatService.Create(chat, problemId, TaskType.Exam, CancellationToken.None);
             createdChat.Id.Should().NotBe(Guid.Empty);
             
             var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();

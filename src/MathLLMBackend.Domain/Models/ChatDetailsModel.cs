@@ -1,3 +1,5 @@
+using MathLLMBackend.Domain.Enums;
+
 namespace MathLLMBackend.Domain.Models;
 
-public record ChatDetailsModel(int? TaskType, string? TheoryLink);
+public record ChatDetailsModel(TaskType? TaskType, string? TheoryLink);

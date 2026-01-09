@@ -1,3 +1,4 @@
+using MathLLMBackend.Core.Constants;
 using MathLLMBackend.Domain.Models;
 using MathLLMBackend.DataAccess.Contexts;
 using MathLLMBackend.Domain.Enums;
@@ -21,12 +22,6 @@ public class StatsService : IStatsService
         _context = context;
         _configuration = configuration;
         _logger = logger;
-    }
-
-    public Task<Dictionary<string, string>> GetTaskModeTitlesAsync(CancellationToken ct = default)
-    {
-        var taskModeTitles = _configuration.GetSection("TaskModeTitles").Get<Dictionary<string, string>>();
-        return Task.FromResult(taskModeTitles ?? new Dictionary<string, string>());
     }
 
     public async Task<IEnumerable<UserStats>> GetUserStatsAsync(CancellationToken ct = default)

@@ -23,7 +23,8 @@ public class UserTask
     public string DisplayName { get; set; } = null!;
 
     [Required]
-    public int TaskType { get; set; }
+    [Column("TaskType", TypeName = "integer")]
+    public TaskType TaskType { get; set; }
 
     [Required]
     public UserTaskStatus Status { get; set; }

@@ -22,7 +22,7 @@ public class LlmController : ControllerBase
     }
 
     [HttpPost("solve-problem")]
-    [Authorize(Roles = RoleConstants.Admin)]
+    [Authorize(Roles = Role.Admin)]
     public async Task<IActionResult> SolveProblem([FromBody] SolveProblemRequest request, CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(request.ProblemDescription))
@@ -36,7 +36,7 @@ public class LlmController : ControllerBase
     }
 
     [HttpPost("extract-answer")]
-    [Authorize(Roles = RoleConstants.Admin)]
+    [Authorize(Roles = Role.Admin)]
     public async Task<IActionResult> ExtractAnswer([FromBody] ExtractAnswerRequest request, CancellationToken ct)
     {
         _logger.LogInformation("ExtractAnswer called with ProblemStatement length: {ProblemStatementLength}, Solution length: {SolutionLength}", 

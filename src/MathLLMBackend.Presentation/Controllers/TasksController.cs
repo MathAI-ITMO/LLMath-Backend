@@ -1,5 +1,6 @@
 using MathLLMBackend.Core.Constants;
 using MathLLMBackend.Core.Services.GeolinService;
+using MathLLMBackend.Domain.Constants;
 using MathLLMBackend.Presentation.Dtos.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
@@ -18,7 +19,7 @@ public class TasksController : ControllerBase
     }
 
     [HttpGet("problems")]
-    [Authorize]
+    [Authorize(Roles = Role.Admin)]
     public async Task<IActionResult> GetProblems(
         [FromQuery] int page = GeolinConstants.Pagination.DefaultPage, 
         [FromQuery] int size = GeolinConstants.Pagination.DefaultPageSize, 

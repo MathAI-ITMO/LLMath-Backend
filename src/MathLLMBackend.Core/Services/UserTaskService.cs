@@ -1,4 +1,3 @@
-using MathLLMBackend.Core.Configuration;
 using MathLLMBackend.Core.Constants;
 using MathLLMBackend.Core.Services.ChatService;
 using MathLLMBackend.DataAccess.Contexts;
@@ -6,11 +5,9 @@ using MathLLMBackend.Domain.Entities;
 using MathLLMBackend.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using MathLLMBackend.ProblemsClient.Models;
 using MathLLMBackend.Core.Services.ProblemsService;
 using MathLLMBackend.Domain.Exceptions;
-using Microsoft.Extensions.Configuration;
 
 namespace MathLLMBackend.Core.Services;
 
@@ -18,22 +15,26 @@ public class UserTaskService(
     AppDbContext context,
     IProblemsService problemsService,
     IChatService chatService,
-    ILogger<UserTaskService> logger,
-    IConfiguration configuration)
+    ILogger<UserTaskService> logger)
     : IUserTaskService
 {
     private readonly AppDbContext _context = context;
     private readonly IProblemsService _problemsService = problemsService;
     private readonly IChatService _chatService = chatService;
     private readonly ILogger<UserTaskService> _logger = logger;
-    private readonly Dictionary<string, string> _taskModeTitles = configuration.GetSection("TaskModeTitles").Get<Dictionary<string, string>>() 
-                                                                  ?? new Dictionary<string, string>();
 
-    public async Task<IEnumerable<UserTask>> GetOrCreateUserTasksAsync(string userId, int taskType, CancellationToken cancellationToken = default)
+    private static readonly Dictionary<TaskType, string> TaskTypeToProblemTypeName = new()
     {
-        if (!_taskModeTitles.TryGetValue(taskType.ToString(), out var typeName))
+        { TaskType.Learning, "problems" },
+        { TaskType.Guided, "problems" },
+        { TaskType.Exam, "problems" }
+    };
+
+    public async Task<IEnumerable<UserTask>> GetOrCreateUserTasksAsync(string userId, TaskType taskType, CancellationToken cancellationToken = default)
+    {
+        if (!TaskTypeToProblemTypeName.TryGetValue(taskType, out var typeName))
         {
-            _logger.LogWarning("Task type {TaskType} is not configured in TaskModeTitles. Returning empty tasks.", taskType);
+            _logger.LogWarning("Task type {TaskType} is not configured. Returning empty tasks.", taskType);
             return Enumerable.Empty<UserTask>();
         }
 

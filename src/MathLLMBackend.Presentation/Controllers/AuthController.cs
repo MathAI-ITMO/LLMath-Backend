@@ -43,7 +43,7 @@ namespace MathLLMBackend.Presentation.Controllers
                     user.FirstName,
                     user.LastName,
                     user.StudentGroup,
-                    RoleConstants.User));
+                    Role.User));
             }
             catch (InvalidOperationException ex)
             {

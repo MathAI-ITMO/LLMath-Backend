@@ -48,7 +48,7 @@ public class TestAuthenticationHandler : AuthenticationHandler<AuthenticationSch
                 new Claim(ClaimTypeConstants.FirstName, "Test"),
                 new Claim(ClaimTypeConstants.LastName, "User"),
                 new Claim(ClaimTypeConstants.StudentGroup, "TestGroup"),
-                new Claim(ClaimTypes.Role, RoleConstants.User)
+                new Claim(ClaimTypes.Role, Role.User)
             };
 
             var fallbackIdentity = new ClaimsIdentity(fallbackClaims, "Test");

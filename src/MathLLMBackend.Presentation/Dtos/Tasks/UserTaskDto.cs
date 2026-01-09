@@ -6,7 +6,7 @@ public record UserTaskDto(
     Guid Id,
     string ProblemId,
     string DisplayName,
-    int TaskType,
+    TaskType TaskType,
     UserTaskStatus Status,
     Guid? AssociatedChatId
 ); 

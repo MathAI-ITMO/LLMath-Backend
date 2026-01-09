@@ -20,7 +20,6 @@ public class UserTaskServiceTests
     private readonly Mock<IProblemsService> _problemsServiceMock;
     private readonly Mock<IChatService> _chatServiceMock;
     private readonly Mock<ILogger<UserTaskService>> _loggerMock;
-    private readonly IConfiguration _configuration;
     private readonly UserTaskService _service;
 
     public UserTaskServiceTests()
@@ -34,30 +33,18 @@ public class UserTaskServiceTests
         _chatServiceMock = new Mock<IChatService>();
         _loggerMock = new Mock<ILogger<UserTaskService>>();
 
-        var configDict = new Dictionary<string, string?>
-        {
-            { "TaskModeTitles:1", "Learning" },
-            { "TaskModeTitles:2", "Guided" },
-            { "TaskModeTitles:3", "Exam" }
-        };
-
-        _configuration = new ConfigurationBuilder()
-            .AddInMemoryCollection(configDict)
-            .Build();
-
         _service = new UserTaskService(
             _context,
             _problemsServiceMock.Object,
             _chatServiceMock.Object,
-            _loggerMock.Object,
-            _configuration);
+            _loggerMock.Object);
     }
 
     [Fact]
     public async Task GetOrCreateUserTasksAsync_WhenTaskTypeNotInConfig_ReturnsEmptyList()
     {
         const string userId = "user1";
-        const int taskType = 99;
+        var taskType = (TaskType)99;
 
         var result = await _service.GetOrCreateUserTasksAsync(userId, taskType);
 
@@ -68,7 +55,7 @@ public class UserTaskServiceTests
     public async Task GetOrCreateUserTasksAsync_WhenProblemsServiceThrows_ReturnsEmptyList()
     {
         const string userId = "user1";
-        const int taskType = 1;
+        var taskType = TaskType.Learning;
 
         _problemsServiceMock
             .Setup(x => x.GetSavedProblemsByTypes(It.IsAny<string>(), It.IsAny<CancellationToken>()))
@@ -83,7 +70,7 @@ public class UserTaskServiceTests
     public async Task GetOrCreateUserTasksAsync_WhenNoProblemsFound_ReturnsEmptyList()
     {
         const string userId = "user1";
-        const int taskType = 1;
+        var taskType = TaskType.Learning;
 
         _problemsServiceMock
             .Setup(x => x.GetSavedProblemsByTypes(It.IsAny<string>(), It.IsAny<CancellationToken>()))
@@ -98,7 +85,7 @@ public class UserTaskServiceTests
     public async Task GetOrCreateUserTasksAsync_WhenProblemHasEmptyId_SkipsProblem()
     {
         const string userId = "user1";
-        const int taskType = 1;
+        var taskType = TaskType.Learning;
 
         var problems = new List<Problem>
         {
@@ -120,7 +107,7 @@ public class UserTaskServiceTests
     public async Task GetOrCreateUserTasksAsync_CreatesNewUserTasks_WhenNoneExist()
     {
         const string userId = "user1";
-        const int taskType = 1;
+        var taskType = TaskType.Learning;
 
         var problems = new List<Problem>
         {
@@ -150,7 +137,7 @@ public class UserTaskServiceTests
     public async Task GetOrCreateUserTasksAsync_WhenTaskExists_ReturnsExistingTask()
     {
         const string userId = "user1";
-        const int taskType = 1;
+        var taskType = TaskType.Learning;
         const string problemId = "problem1";
 
         var existingTask = new UserTask
@@ -190,7 +177,7 @@ public class UserTaskServiceTests
     public async Task GetOrCreateUserTasksAsync_WhenProblemHasNoTitle_UsesStatementSnippet()
     {
         const string userId = "user1";
-        const int taskType = 1;
+        var taskType = TaskType.Learning;
         var longStatement = new string('a', 100);
 
         var problems = new List<Problem>
@@ -234,7 +221,7 @@ public class UserTaskServiceTests
             ProblemId = "problem1",
             ProblemHash = "problem1",
             DisplayName = "Test Task",
-            TaskType = 1,
+            TaskType = TaskType.Learning,
             Status = UserTaskStatus.NotStarted
         };
 
@@ -258,7 +245,7 @@ public class UserTaskServiceTests
             ProblemId = "problem1",
             ProblemHash = "problem1",
             DisplayName = "Test Task",
-            TaskType = 1,
+            TaskType = TaskType.Learning,
             Status = UserTaskStatus.InProgress,
             AssociatedChatId = chatId
         };
@@ -286,7 +273,7 @@ public class UserTaskServiceTests
             ProblemId = "problem1",
             ProblemHash = "problem1",
             DisplayName = "Test Task",
-            TaskType = 1,
+            TaskType = TaskType.Learning,
             Status = UserTaskStatus.InProgress,
             AssociatedChatId = existingChatId
         };
@@ -311,7 +298,7 @@ public class UserTaskServiceTests
             ProblemId = "problem1",
             ProblemHash = "problem1",
             DisplayName = "Test Task",
-            TaskType = 1,
+            TaskType = TaskType.Learning,
             Status = UserTaskStatus.NotStarted
         };
 
@@ -352,7 +339,7 @@ public class UserTaskServiceTests
             ProblemId = "problem1",
             ProblemHash = "problem1",
             DisplayName = "Test Task",
-            TaskType = 1,
+            TaskType = TaskType.Learning,
             Status = UserTaskStatus.NotStarted
         };
 
@@ -375,7 +362,7 @@ public class UserTaskServiceTests
             ProblemId = "problem1",
             ProblemHash = "problem1",
             DisplayName = "Test Task",
-            TaskType = 1,
+            TaskType = TaskType.Learning,
             Status = UserTaskStatus.InProgress
         };
 
@@ -412,7 +399,7 @@ public class UserTaskServiceTests
             ProblemId = "problem1",
             ProblemHash = "problem1",
             DisplayName = "Test Task",
-            TaskType = 1,
+            TaskType = TaskType.Learning,
             Status = UserTaskStatus.InProgress
         };
 
@@ -435,7 +422,7 @@ public class UserTaskServiceTests
             ProblemId = "problem1",
             ProblemHash = "problem1",
             DisplayName = "Test Task",
-            TaskType = 1,
+            TaskType = TaskType.Learning,
             Status = UserTaskStatus.Solved
         };
 
@@ -459,7 +446,7 @@ public class UserTaskServiceTests
             ProblemId = "problem1",
             ProblemHash = "problem1",
             DisplayName = "Test Task",
-            TaskType = 1,
+            TaskType = TaskType.Learning,
             Status = UserTaskStatus.InProgress
         };
 

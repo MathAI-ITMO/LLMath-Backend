@@ -43,7 +43,7 @@ public class ChatService(
         return chatEntry.Entity;
     }
 
-    public async Task<Chat> Create(Chat chat, string problemDbId, int explicitTaskType, CancellationToken ct)
+    public async Task<Chat> Create(Chat chat, string problemDbId, TaskType explicitTaskType, CancellationToken ct)
     {
         chat.Type = ChatType.ProblemSolver;
         _logger.LogInformation("Creating chat for ProblemSolver. ProblemDB_ID: {ProblemDbId}, ExplicitTaskType: {ExplicitTaskType}", 
@@ -115,7 +115,7 @@ public class ChatService(
         }
     }
 
-    private List<Message> BuildInitialMessages(Chat chat, Problem problem, string? llmSolution, int taskType)
+    private List<Message> BuildInitialMessages(Chat chat, Problem problem, string? llmSolution, TaskType taskType)
     {
         var systemPrompt = _promptService.GetSystemPromptByTaskType(taskType);
         var systemMessage = new Message(chat, systemPrompt, MessageType.System);
@@ -126,7 +126,7 @@ public class ChatService(
         var conditionMessage = new Message(chat, formattedCondition, MessageType.Assistant);
         messages.Add(conditionMessage);
         
-        if (taskType != TaskTypes.Exam && !string.IsNullOrWhiteSpace(llmSolution))
+        if (taskType != TaskType.Exam && !string.IsNullOrWhiteSpace(llmSolution))
         {
             var tutorSolutionPrompt = _promptService.GetTutorSolutionPrompt(llmSolution);
             var solutionMessage = new Message(chat, tutorSolutionPrompt, MessageType.User, isSystemPrompt: true);
@@ -146,7 +146,7 @@ public class ChatService(
         Chat chat, 
         Problem problem, 
         string? llmSolution, 
-        int taskType, 
+        TaskType taskType, 
         CancellationToken ct)
     {
         var systemPrompt = _promptService.GetSystemPromptByTaskType(taskType);
@@ -154,7 +154,7 @@ public class ChatService(
         
         var messagesForLlm = new List<Message> { systemMessage };
         
-        if (taskType != TaskTypes.Exam && !string.IsNullOrWhiteSpace(llmSolution))
+        if (taskType != TaskType.Exam && !string.IsNullOrWhiteSpace(llmSolution))
         {
             var tutorSolutionPrompt = _promptService.GetTutorSolutionPrompt(llmSolution);
             messagesForLlm.Add(new Message(chat, tutorSolutionPrompt, MessageType.User, isSystemPrompt: true));
@@ -211,13 +211,13 @@ public class ChatService(
             throw new NotFoundException($"Chat with ID {message.ChatId} not found.");
         }
 
-        int taskType = await DetermineTaskTypeAsync(currentChat, ct);
+        TaskType taskType = await DetermineTaskTypeAsync(currentChat, ct);
 
         _logger.LogInformation("Generating (full) response in chat {ChatId} | taskType = {TaskType}", currentChat.Id, taskType);
         
         var messagesForLlm = currentChat.Messages.ToList();
         
-        if (taskType == TaskTypes.Exam)
+        if (taskType == TaskType.Exam)
         {
             messagesForLlm.RemoveAll(m => m.IsSystemPrompt && m.Text.Contains(MessageConstants.TutorSolutionMarker));
         }
@@ -239,9 +239,9 @@ public class ChatService(
         return llmResponseText;
     }
 
-    private async Task<int> DetermineTaskTypeAsync(Chat currentChat, CancellationToken ct)
+    private async Task<TaskType> DetermineTaskTypeAsync(Chat currentChat, CancellationToken ct)
     {
-        int taskType = TaskTypes.Default; 
+        TaskType taskType = TaskType.Default; 
         
         if (currentChat.Type == ChatType.ProblemSolver)
         {
@@ -253,29 +253,29 @@ public class ChatService(
         return taskType;
     }
 
-    private int DetermineTaskTypeFromSystemPrompt(Chat chat)
+    private TaskType DetermineTaskTypeFromSystemPrompt(Chat chat)
     {
         var systemMessage = chat.Messages.FirstOrDefault(m => m.MessageType == MessageType.System);
         
         if (systemMessage == null)
         {
             _logger.LogWarning("No system prompt found to determine taskType for chat {ChatId}", chat.Id);
-            return TaskTypes.Default;
+            return TaskType.Default;
         }
         
         var systemPromptText = systemMessage.Text;
         
         if (systemPromptText == _promptService.GetLearningSystemPrompt())
-            return TaskTypes.Learning;
+            return TaskType.Learning;
         
         if (systemPromptText == _promptService.GetGuidedSystemPrompt())
-            return TaskTypes.Guided;
+            return TaskType.Guided;
         
         if (systemPromptText == _promptService.GetExamSystemPrompt())
-            return TaskTypes.Exam;
+            return TaskType.Exam;
         
         _logger.LogWarning("Could not determine taskType from system prompt for chat {ChatId}", chat.Id);
-        return TaskTypes.Default;
+        return TaskType.Default;
     }
     
     private async Task<List<Message>> GetAllMessageFromChat(Chat chat, CancellationToken ct)
@@ -347,7 +347,7 @@ public class ChatService(
         return chat;
     }
 
-    public async Task<Guid> GetOrCreateProblemChatAsync(string problemHash, string userId, string taskDisplayName, int taskType, CancellationToken ct)
+    public async Task<Guid> GetOrCreateProblemChatAsync(string problemHash, string userId, string taskDisplayName, TaskType taskType, CancellationToken ct)
     {
         var chatName = $"{taskDisplayName} {DateTime.Now:dd.MM.yyyy HH:mm}";
         var newChat = new Chat
@@ -379,7 +379,7 @@ public class ChatService(
             return new ChatDetailsModel(null, null);
         }
 
-        int? taskType = userTask.TaskType;
+        TaskType? taskType = userTask.TaskType;
         string? theoryLink = null;
 
         try
@@ -418,7 +418,7 @@ public class ChatService(
             return new ChatDetailsModel(null, null);
         }
 
-        int? taskType = userTask.TaskType;
+        TaskType? taskType = userTask.TaskType;
         string? theoryLink = null;
 
         try
