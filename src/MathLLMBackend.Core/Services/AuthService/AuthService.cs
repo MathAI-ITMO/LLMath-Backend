@@ -1,3 +1,4 @@
+using MathLLMBackend.Core.Constants;
 using MathLLMBackend.Domain.Entities;
 using MathLLMBackend.Domain.Exceptions;
 using Microsoft.AspNetCore.Identity;
@@ -37,6 +38,7 @@ public class AuthService : IAuthService
 
         if (result.Succeeded)
         {
+            await _userManager.AddToRoleAsync(user, RoleConstants.User);
             _logger.LogInformation("User created a new account with extended profile.");
             return user;
         }

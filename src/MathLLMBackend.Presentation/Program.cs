@@ -14,6 +14,7 @@ using NLog.Web;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using MathLLMBackend.DataAccess.Contexts;
+using MathLLMBackend.DataAccess.Services.Identity;
 using MathLLMBackend.Presentation.Configuration;
 using MathLLMBackend.Domain.Entities;
 using System.Threading;
@@ -55,7 +56,9 @@ try
         options.User.RequireUniqueEmail = true;
         options.SignIn.RequireConfirmedEmail = false;
     })
-        .AddEntityFrameworkStores<AppDbContext>();
+        .AddRoles<IdentityRole>()
+        .AddEntityFrameworkStores<AppDbContext>()
+        .AddClaimsPrincipalFactory<ApplicationUserClaimsPrincipalFactory>();
     
     builder.Services.AddAuthorization();
 
