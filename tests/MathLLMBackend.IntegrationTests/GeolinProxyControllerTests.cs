@@ -17,6 +17,7 @@ public class GeolinProxyControllerTests : BaseIntegrationTest
     [Fact]
     public async Task GetProblemDataByPrefix_WithValidPrefix_ReturnsOk()
     {
+        await CreateAndLoginAdminUserAsync();
         Factory.GeolinApiMock
             .Setup(x => x.GetProblemsInfo(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>()))
             .ReturnsAsync(new ProblemPageResponse
@@ -44,6 +45,7 @@ public class GeolinProxyControllerTests : BaseIntegrationTest
     [Fact]
     public async Task GetProblemDataByPrefix_WithEmptyPrefix_ReturnsBadRequest()
     {
+        await CreateAndLoginAdminUserAsync();
         var response = await AuthenticatedGetAsync("/api/v1/geolin-proxy/problem-data?prefix=");
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
@@ -52,6 +54,7 @@ public class GeolinProxyControllerTests : BaseIntegrationTest
     [Fact]
     public async Task CheckAnswerDirect_WithValidRequest_ReturnsOk()
     {
+        await CreateAndLoginAdminUserAsync();
         var request = new
         {
             Hash = "test-hash",

@@ -2,6 +2,7 @@ using MathLLMBackend.Core.Services.StatsService;
 using MathLLMBackend.Domain.Constants;
 using MathLLMBackend.Presentation.Binders;
 using MathLLMBackend.Presentation.Dtos.Stats;
+using MathLLMBackend.Presentation.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -54,7 +55,7 @@ public class StatsController : ControllerBase
 
     [HttpGet("user-details/{userId}")]
     [Authorize(Roles = RoleConstants.Admin)]
-    public async Task<IActionResult> GetUserDetails(string userId, [FromUserId] string currentUserId, CancellationToken ct = default)
+    public async Task<IActionResult> GetUserDetails(string userId, [FromJwt] JwtUser currentUser, CancellationToken ct = default)
     {
 
         var detail = await _statsService.GetUserDetailsAsync(userId, ct);

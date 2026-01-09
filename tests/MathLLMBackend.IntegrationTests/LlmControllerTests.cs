@@ -17,6 +17,7 @@ public class LlmControllerTests : BaseIntegrationTest
     [Fact]
     public async Task SolveProblem_WithValidRequest_ReturnsOk()
     {
+        await CreateAndLoginAdminUserAsync();
         Factory.LlmServiceMock
             .Setup(x => x.SolveProblem(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync("Test solution");
@@ -32,6 +33,7 @@ public class LlmControllerTests : BaseIntegrationTest
     [Fact]
     public async Task SolveProblem_WithEmptyDescription_ReturnsBadRequest()
     {
+        await CreateAndLoginAdminUserAsync();
         var request = new { ProblemDescription = "" };
         var response = await AuthenticatedPostAsync("/api/v1/llm/solve-problem", request);
 
@@ -41,6 +43,7 @@ public class LlmControllerTests : BaseIntegrationTest
     [Fact]
     public async Task ExtractAnswer_WithValidRequest_ReturnsOk()
     {
+        await CreateAndLoginAdminUserAsync();
         Factory.LlmServiceMock
             .Setup(x => x.ExtractAnswer(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync("42");
@@ -58,6 +61,7 @@ public class LlmControllerTests : BaseIntegrationTest
     [Fact]
     public async Task ExtractAnswer_WithEmptyProblemStatement_ReturnsBadRequest()
     {
+        await CreateAndLoginAdminUserAsync();
         var request = new
         {
             ProblemStatement = "",
@@ -71,6 +75,7 @@ public class LlmControllerTests : BaseIntegrationTest
     [Fact]
     public async Task ExtractAnswer_WithEmptySolution_ReturnsBadRequest()
     {
+        await CreateAndLoginAdminUserAsync();
         var request = new
         {
             ProblemStatement = "What is 2+2?",

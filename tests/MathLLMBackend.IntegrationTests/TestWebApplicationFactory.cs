@@ -81,8 +81,22 @@ public class TestWebApplicationFactory : WebApplicationFactory<Program>
                 options.Password.RequiredLength = 3;
             });
 
-            services.AddAuthentication("Test")
-                .AddScheme<AuthenticationSchemeOptions, TestAuthenticationHandler>("Test", options => { });
+            // Configure authentication with Test as default scheme
+            services.AddAuthentication(options =>
+            {
+                options.DefaultAuthenticateScheme = "Test";
+                options.DefaultChallengeScheme = "Test";
+                options.DefaultScheme = "Test";
+            })
+            .AddScheme<AuthenticationSchemeOptions, TestAuthenticationHandler>("Test", options => { });
+            
+            // Ensure Test scheme is always used as default, even after Identity configuration
+            services.PostConfigure<AuthenticationOptions>(options =>
+            {
+                options.DefaultAuthenticateScheme = "Test";
+                options.DefaultChallengeScheme = "Test";
+                options.DefaultScheme = "Test";
+            });
 
             services.Configure<GeolinClientOptions>(options =>
             {
@@ -124,6 +138,32 @@ public class TestWebApplicationFactory : WebApplicationFactory<Program>
 
         await userManager.CreateAsync(user, password);
         await userManager.AddToRoleAsync(user, MathLLMBackend.Domain.Constants.RoleConstants.User);
+        return user;
+    }
+
+    public async Task<ApplicationUser> CreateTestAdminUserAsync(string email = "admin@example.com", string password = "Test123!@#")
+    {
+        using var scope = Services.CreateScope();
+        var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+        var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
+        
+        // Ensure admin role exists
+        if (!await roleManager.RoleExistsAsync(MathLLMBackend.Domain.Constants.RoleConstants.Admin))
+        {
+            await roleManager.CreateAsync(new IdentityRole(MathLLMBackend.Domain.Constants.RoleConstants.Admin));
+        }
+        
+        var user = new ApplicationUser
+        {
+            UserName = email,
+            Email = email,
+            FirstName = "Admin",
+            LastName = "User",
+            StudentGroup = "AdminGroup"
+        };
+
+        await userManager.CreateAsync(user, password);
+        await userManager.AddToRoleAsync(user, MathLLMBackend.Domain.Constants.RoleConstants.Admin);
         return user;
     }
 

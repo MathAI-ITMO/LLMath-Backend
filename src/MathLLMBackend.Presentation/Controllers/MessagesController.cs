@@ -3,6 +3,7 @@ using MathLLMBackend.Domain.Constants;
 using MathLLMBackend.Domain.Entities;
 using MathLLMBackend.Domain.Exceptions;
 using MathLLMBackend.Presentation.Binders;
+using MathLLMBackend.Presentation.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MathLLMBackend.Domain.Enums;
@@ -25,9 +26,9 @@ namespace MathLLMBackend.Presentation.Controllers
         }
     
         [HttpPost("complete")]
-        public async Task<IActionResult> Complete([FromBody] MessageCreateDto dto, [FromUserId] string userId, CancellationToken ct)
+        public async Task<IActionResult> Complete([FromBody] MessageCreateDto dto, [FromJwt] JwtUser user, CancellationToken ct)
         {
-            string llmResponseText = await _service.CreateMessageForUser(dto.ChatId, userId, dto.Text, ct);
+            string llmResponseText = await _service.CreateMessageForUser(dto.ChatId, user.Id, dto.Text, ct);
 
             if (Response.HasStarted)
             {
@@ -45,7 +46,7 @@ namespace MathLLMBackend.Presentation.Controllers
         }
     
         [HttpGet("get-messages-from-chat")]
-        public async Task<IActionResult> GetAllMessagesFromChat(Guid chatId, [FromUserId] string userId, CancellationToken ct)
+        public async Task<IActionResult> GetAllMessagesFromChat(Guid chatId, [FromJwt] JwtUser user, CancellationToken ct)
         {
             var isAdmin = User.IsInRole(RoleConstants.Admin);
             
@@ -56,7 +57,7 @@ namespace MathLLMBackend.Presentation.Controllers
             }
             else
             {
-                messages = await _service.GetUserVisibleMessagesFromChat(chatId, userId, ct);
+                messages = await _service.GetUserVisibleMessagesFromChat(chatId, user.Id, ct);
             }
             
             return Ok(

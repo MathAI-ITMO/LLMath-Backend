@@ -15,6 +15,7 @@ public class StatsControllerTests : BaseIntegrationTest
     [Fact]
     public async Task GetTaskModeTitles_ReturnsOk()
     {
+        await CreateAndLoginAdminUserAsync();
         var response = await AuthenticatedGetAsync("/api/stats/task-mode-titles");
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -25,6 +26,7 @@ public class StatsControllerTests : BaseIntegrationTest
     [Fact]
     public async Task GetUserStats_ReturnsOk()
     {
+        await CreateAndLoginAdminUserAsync();
         var response = await AuthenticatedGetAsync("/api/stats/user-stats");
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -33,8 +35,9 @@ public class StatsControllerTests : BaseIntegrationTest
     [Fact]
     public async Task GetUserDetails_WithValidUserId_ReturnsOk()
     {
-        var user = await CreateAndLoginUserAsync();
-        var response = await AuthenticatedClient!.GetAsync($"/api/stats/user-details/{user.Id}");
+        var adminUser = await CreateAndLoginAdminUserAsync();
+        var regularUser = await Factory.CreateTestUserAsync("regular@example.com", "Test123!@#");
+        var response = await AuthenticatedClient!.GetAsync($"/api/stats/user-details/{regularUser.Id}");
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
     }
@@ -42,7 +45,7 @@ public class StatsControllerTests : BaseIntegrationTest
     [Fact]
     public async Task GetUserDetails_WithOtherUserId_ReturnsForbidden()
     {
-        await CreateAndLoginUserAsync();
+        await CreateAndLoginAdminUserAsync();
         var response = await AuthenticatedClient!.GetAsync("/api/stats/user-details/some-other-user-id");
 
         response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
