@@ -2,9 +2,6 @@ using MathLLMBackend.Core.Constants;
 using MathLLMBackend.Domain.Models;
 using MathLLMBackend.GeolinClient;
 using MathLLMBackend.GeolinClient.Models;
-using MathLLMBackend.GeolinClient.Options;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using System.Text.Json;
 
 namespace MathLLMBackend.Core.Services.GeolinService;
@@ -12,15 +9,12 @@ namespace MathLLMBackend.Core.Services.GeolinService;
 public class GeolinService : IGeolinService
 {
     private readonly IGeolinApi _geolinApi;
-    private readonly GeolinClientOptions _options;
     private readonly Random _random = new();
 
     public GeolinService(
-        IGeolinApi geolinApi, 
-        IOptions<GeolinClientOptions> geolinOptions)
+        IGeolinApi geolinApi)
     {
         _geolinApi = geolinApi;
-        _options = geolinOptions.Value;
     }
 
     public async Task<ProblemPageResponse> GetProblems(int page, int size, string? prefixName = "", CancellationToken ct = default)
@@ -49,7 +43,7 @@ public class GeolinService : IGeolinService
         {
             Name = problem.Name,
             Hash = problem.Hash,
-            Condition = condition.Condition ?? string.Empty,
+            Condition = condition.Condition,
             Seed = finalSeed,
             ProblemParams = condition.ProblemParams
         };
@@ -57,11 +51,6 @@ public class GeolinService : IGeolinService
 
     public async Task<AnswerCheckResult> CheckAnswerAsync(string hash, string answerAttempt, int? seed = null, string? problemParams = null, CancellationToken ct = default)
     {
-        if (string.IsNullOrWhiteSpace(_options.BaseAddress) || string.IsNullOrWhiteSpace(_options.AuthorizationHeader))
-        {
-            throw new InvalidOperationException("Geolin configuration is missing.");
-        }
-
         var verdict = await GetAnswerVerdictAsync(hash, answerAttempt, seed, problemParams, ct);
         var isCorrect = verdict >= GeolinConstants.CorrectAnswerVerdictThreshold;
 

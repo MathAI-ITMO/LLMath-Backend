@@ -2,9 +2,6 @@ using FluentAssertions;
 using MathLLMBackend.Core.Services.GeolinService;
 using MathLLMBackend.GeolinClient;
 using MathLLMBackend.GeolinClient.Models;
-using MathLLMBackend.GeolinClient.Options;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using Moq;
 using Xunit;
 
@@ -13,25 +10,12 @@ namespace MathLLMBackend.Tests.Services;
 public class GeolinServiceTests
 {
     private readonly Mock<IGeolinApi> _geolinApiMock;
-    private readonly Mock<ILogger<GeolinService>> _loggerMock;
-    private readonly Mock<IOptions<GeolinClientOptions>> _optionsMock;
     private readonly GeolinService _service;
 
     public GeolinServiceTests()
     {
         _geolinApiMock = new Mock<IGeolinApi>();
-        _loggerMock = new Mock<ILogger<GeolinService>>();
-        _optionsMock = new Mock<IOptions<GeolinClientOptions>>();
-        
-        _optionsMock.Setup(x => x.Value).Returns(new GeolinClientOptions
-        {
-            BaseAddress = "https://test.com",
-            AuthorizationHeader = "test-auth"
-        });
-
-        _service = new GeolinService(
-            _geolinApiMock.Object,
-            _optionsMock.Object);
+        _service = new GeolinService(_geolinApiMock.Object);
     }
 
     [Fact]
