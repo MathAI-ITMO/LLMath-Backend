@@ -1,6 +1,9 @@
 using MathLLMBackend.Core.Constants;
 using MathLLMBackend.Core.Services.ChatService;
+using MathLLMBackend.Domain.Constants;
 using MathLLMBackend.Domain.Entities;
+using MathLLMBackend.Domain.Exceptions;
+using MathLLMBackend.Domain.Models;
 using MathLLMBackend.Presentation.Binders;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -46,8 +49,23 @@ namespace MathLLMBackend.Presentation.Controllers
         [HttpGet("get/{chatId:guid}")]
         public async Task<IActionResult> GetChatDetails(Guid chatId, [FromUserId] string userId, CancellationToken ct)
         {
-            var details = await _chatService.GetChatDetailsAsync(chatId, userId, ct);
-            var chat = await _chatService.GetChatByIdForUser(chatId, userId, ct);
+            var isAdmin = User.IsInRole(RoleConstants.Admin);
+            
+            Chat chat;
+            ChatDetailsModel details;
+            
+            if (isAdmin)
+            {
+                chat = await _chatService.GetChatByIdAsync(chatId, ct) 
+                    ?? throw new NotFoundException($"Chat with ID {chatId} not found.");
+                details = await _chatService.GetChatDetailsForAdminAsync(chatId, ct);
+            }
+            else
+            {
+                details = await _chatService.GetChatDetailsAsync(chatId, userId, ct);
+                chat = await _chatService.GetChatByIdForUser(chatId, userId, ct);
+            }
+            
             return Ok(new ChatDto(chat.Id, chat.Name, chat.Type?.ToString() ?? ChatConstants.DefaultChatTypeName, details.TaskType, details.TheoryLink));
         }
 

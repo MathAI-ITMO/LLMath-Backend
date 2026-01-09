@@ -313,6 +313,23 @@ public class ChatService(
         return chat;
     }
 
+    public async Task<Chat?> GetChatByIdAsync(Guid chatId, CancellationToken ct)
+    {
+        return await GetChatById(chatId, ct);
+    }
+
+    public async Task<List<Message>> GetUserVisibleMessagesFromChatForAdmin(Guid chatId, CancellationToken ct)
+    {
+        var chat = await GetChatById(chatId, ct);
+        if (chat == null)
+        {
+            throw new NotFoundException($"Chat with ID {chatId} not found.");
+        }
+        
+        var allMessages = await GetAllMessageFromChat(chat, ct);
+        return allMessages.Where(m => !m.IsSystemPrompt).ToList();
+    }
+
     public async Task<Chat> GetChatByIdForUser(Guid chatId, string userId, CancellationToken ct)
     {
         var chat = await GetChatById(chatId, ct);
@@ -347,6 +364,45 @@ public class ChatService(
     public async Task<ChatDetailsModel> GetChatDetailsAsync(Guid chatId, string userId, CancellationToken ct)
     {
         var chat = await GetChatByIdForUser(chatId, userId, ct);
+        
+        if (chat.Type != ChatType.ProblemSolver)
+        {
+            return new ChatDetailsModel(null, null);
+        }
+
+        var userTask = await _dbContext.UserTasks
+            .AsNoTracking()
+            .FirstOrDefaultAsync(ut => ut.AssociatedChatId == chatId, ct);
+        
+        if (userTask == null)
+        {
+            return new ChatDetailsModel(null, null);
+        }
+
+        int? taskType = userTask.TaskType;
+        string? theoryLink = null;
+
+        try
+        {
+            var problem = await _problemsService.GetProblemFromDbAsync(userTask.ProblemId, ct);
+            theoryLink = problem?.TheoryLink;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to get theory link for problem {ProblemId}", userTask.ProblemId);
+        }
+
+        return new ChatDetailsModel(taskType, theoryLink);
+    }
+
+    public async Task<ChatDetailsModel> GetChatDetailsForAdminAsync(Guid chatId, CancellationToken ct)
+    {
+        var chat = await GetChatById(chatId, ct);
+        
+        if (chat == null)
+        {
+            throw new NotFoundException($"Chat with ID {chatId} not found.");
+        }
         
         if (chat.Type != ChatType.ProblemSolver)
         {

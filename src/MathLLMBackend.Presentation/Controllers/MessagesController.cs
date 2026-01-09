@@ -1,4 +1,5 @@
 using MathLLMBackend.Core.Services.ChatService;
+using MathLLMBackend.Domain.Constants;
 using MathLLMBackend.Domain.Entities;
 using MathLLMBackend.Domain.Exceptions;
 using MathLLMBackend.Presentation.Binders;
@@ -46,7 +47,17 @@ namespace MathLLMBackend.Presentation.Controllers
         [HttpGet("get-messages-from-chat")]
         public async Task<IActionResult> GetAllMessagesFromChat(Guid chatId, [FromUserId] string userId, CancellationToken ct)
         {
-            var messages = await _service.GetUserVisibleMessagesFromChat(chatId, userId, ct);
+            var isAdmin = User.IsInRole(RoleConstants.Admin);
+            
+            List<Message> messages;
+            if (isAdmin)
+            {
+                messages = await _service.GetUserVisibleMessagesFromChatForAdmin(chatId, ct);
+            }
+            else
+            {
+                messages = await _service.GetUserVisibleMessagesFromChat(chatId, userId, ct);
+            }
             
             return Ok(
                 messages.Select(m => new MessageDto(m.Id, m.ChatId, m.Text, m.MessageType.ToString(), m.CreatedAt))

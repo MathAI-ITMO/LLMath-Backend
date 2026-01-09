@@ -15,5 +15,8 @@ public interface IChatService
     Task<List<Message>> GetUserVisibleMessagesFromChat(Guid chatId, string userId, CancellationToken ct);
     Task<Chat> GetChatByIdForUser(Guid chatId, string userId, CancellationToken ct);
     Task<ChatDetailsModel> GetChatDetailsAsync(Guid chatId, string userId, CancellationToken ct);
+    Task<Chat?> GetChatByIdAsync(Guid chatId, CancellationToken ct);
+    Task<List<Message>> GetUserVisibleMessagesFromChatForAdmin(Guid chatId, CancellationToken ct);
+    Task<ChatDetailsModel> GetChatDetailsForAdminAsync(Guid chatId, CancellationToken ct);
 }
 

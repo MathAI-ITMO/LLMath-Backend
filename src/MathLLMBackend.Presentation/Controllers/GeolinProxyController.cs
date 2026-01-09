@@ -1,4 +1,5 @@
 using MathLLMBackend.Core.Services.GeolinService;
+using MathLLMBackend.Domain.Constants;
 using MathLLMBackend.Presentation.Dtos.Geolin;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -18,6 +19,7 @@ namespace MathLLMBackend.Presentation.Controllers
         }
 
         [HttpGet("problem-data")]
+        [Authorize(Roles = RoleConstants.Admin)]
         public async Task<IActionResult> GetProblemDataByPrefix(
             [FromQuery] string prefix, 
             [FromQuery] int? seed = null,
@@ -44,6 +46,7 @@ namespace MathLLMBackend.Presentation.Controllers
 
         //TODO: Эту функцию надо заменить после того как сервис LLMath-Problems научится верифицировать решения задач
         [HttpPost("check-answer-direct")]
+        [Authorize(Roles = RoleConstants.Admin)]
         public async Task<IActionResult> CheckAnswerDirect([FromBody] CheckAnswerRequest request, CancellationToken ct = default)
         {
             if (string.IsNullOrWhiteSpace(request.Hash))

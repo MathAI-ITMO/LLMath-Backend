@@ -1,4 +1,5 @@
 using MathLLMBackend.Core.Services.StatsService;
+using MathLLMBackend.Domain.Constants;
 using MathLLMBackend.Presentation.Binders;
 using MathLLMBackend.Presentation.Dtos.Stats;
 using Microsoft.AspNetCore.Authorization;
@@ -19,6 +20,7 @@ public class StatsController : ControllerBase
     }
 
     [HttpGet("task-mode-titles")]
+    [Authorize(Roles = RoleConstants.Admin)]
     public async Task<IActionResult> GetTaskModeTitles(CancellationToken ct = default)
     {
         var taskModeTitles = await _statsService.GetTaskModeTitlesAsync(ct);
@@ -30,6 +32,7 @@ public class StatsController : ControllerBase
     }
 
     [HttpGet("user-stats")]
+    [Authorize(Roles = RoleConstants.Admin)]
     public async Task<IActionResult> GetUserStats(CancellationToken ct = default)
     {
         var stats = await _statsService.GetUserStatsAsync(ct);
@@ -50,12 +53,9 @@ public class StatsController : ControllerBase
     }
 
     [HttpGet("user-details/{userId}")]
+    [Authorize(Roles = RoleConstants.Admin)]
     public async Task<IActionResult> GetUserDetails(string userId, [FromUserId] string currentUserId, CancellationToken ct = default)
     {
-        if (userId != currentUserId)
-        {
-            return Forbid();
-        }
 
         var detail = await _statsService.GetUserDetailsAsync(userId, ct);
         
