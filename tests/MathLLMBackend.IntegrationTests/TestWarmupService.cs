@@ -1,5 +1,6 @@
 using MathLLMBackend.DataAccess.Contexts;
 using MathLLMBackend.DataAccess.Services;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
@@ -10,8 +11,11 @@ internal class TestWarmupService : WarmupService
     private readonly AppDbContext _dbContext;
     private readonly ILogger<WarmupService> _logger;
 
-    public TestWarmupService(AppDbContext dbContext, ILogger<WarmupService> logger) 
-        : base(dbContext, logger)
+    public TestWarmupService(
+        AppDbContext dbContext, 
+        RoleManager<IdentityRole> roleManager,
+        ILogger<WarmupService> logger) 
+        : base(dbContext, roleManager, logger)
     {
         _dbContext = dbContext;
         _logger = logger;
@@ -25,6 +29,7 @@ internal class TestWarmupService : WarmupService
         if (isInMemory)
         {
             await _dbContext.Database.EnsureCreatedAsync();
+            await SeedRolesAsync();
             _logger.LogInformation("Database warmup completed successfully (InMemory)");
         }
         else

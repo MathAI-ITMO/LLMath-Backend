@@ -1,6 +1,5 @@
-using MathLLMBackend.Core.Constants;
+using MathLLMBackend.Domain.Constants;
 using MathLLMBackend.Domain.Entities;
-using MathLLMBackend.Domain.Exceptions;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
 

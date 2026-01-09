@@ -1,4 +1,4 @@
-namespace MathLLMBackend.Core.Constants;
+namespace MathLLMBackend.Domain.Constants;
 
 public static class RoleConstants
 {

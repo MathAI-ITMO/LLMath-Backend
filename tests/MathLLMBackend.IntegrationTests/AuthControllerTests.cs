@@ -21,7 +21,7 @@ public class AuthControllerTests : BaseIntegrationTest
             FirstName: "John",
             LastName: "Doe",
             StudentGroup: "Group1",
-            Email: "john.doe@example.com",
+            Email: $"john.doe.{Guid.NewGuid()}@example.com",
             Password: "Test123!@#"
         );
 

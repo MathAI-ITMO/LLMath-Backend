@@ -22,7 +22,7 @@ public class LlmControllerTests : BaseIntegrationTest
             .ReturnsAsync("Test solution");
 
         var request = new { ProblemDescription = "Solve 2+2" };
-        var response = await Client.PostAsJsonAsync("/api/v1/llm/solve-problem", request);
+        var response = await AuthenticatedPostAsync("/api/v1/llm/solve-problem", request);
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var content = await response.Content.ReadAsStringAsync();
@@ -33,7 +33,7 @@ public class LlmControllerTests : BaseIntegrationTest
     public async Task SolveProblem_WithEmptyDescription_ReturnsBadRequest()
     {
         var request = new { ProblemDescription = "" };
-        var response = await Client.PostAsJsonAsync("/api/v1/llm/solve-problem", request);
+        var response = await AuthenticatedPostAsync("/api/v1/llm/solve-problem", request);
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
@@ -50,7 +50,7 @@ public class LlmControllerTests : BaseIntegrationTest
             ProblemStatement = "What is 2+2?",
             Solution = "2+2 = 4"
         };
-        var response = await Client.PostAsJsonAsync("/api/v1/llm/extract-answer", request);
+        var response = await AuthenticatedPostAsync("/api/v1/llm/extract-answer", request);
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
     }
@@ -63,7 +63,7 @@ public class LlmControllerTests : BaseIntegrationTest
             ProblemStatement = "",
             Solution = "2+2 = 4"
         };
-        var response = await Client.PostAsJsonAsync("/api/v1/llm/extract-answer", request);
+        var response = await AuthenticatedPostAsync("/api/v1/llm/extract-answer", request);
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
@@ -76,7 +76,7 @@ public class LlmControllerTests : BaseIntegrationTest
             ProblemStatement = "What is 2+2?",
             Solution = ""
         };
-        var response = await Client.PostAsJsonAsync("/api/v1/llm/extract-answer", request);
+        var response = await AuthenticatedPostAsync("/api/v1/llm/extract-answer", request);
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }

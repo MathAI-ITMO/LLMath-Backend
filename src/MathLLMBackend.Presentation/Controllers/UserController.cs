@@ -32,7 +32,7 @@ namespace MathLLMBackend.Presentation.Controllers
 
             return Ok(new UserInfoDto(
                 Guid.Parse(user.Id),
-                user.Email,
+                user.Email!,
                 user.FirstName,
                 user.LastName,
                 user.StudentGroup));

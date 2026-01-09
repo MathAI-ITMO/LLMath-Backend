@@ -25,8 +25,8 @@ public class Message
     public Guid Id { get; set; }
     
     public Guid ChatId { get; set; }
-    public Chat Chat { get; set; }
-    public string Text { get; set; }
+    public Chat Chat { get; set; } = null!;
+    public string Text { get; set; } = null!;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public MessageType MessageType { get; set; }
     public bool IsSystemPrompt { get; set; }

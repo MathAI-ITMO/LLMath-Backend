@@ -21,57 +21,43 @@ public class ProblemsService : IProblemsService
     }
     public async Task<List<Problem>> GetSavedProblems(CancellationToken ct = default)
     {
-        try  
-        {
-            return await _problemsApi.GetProblems();
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error fetching problems from external problems service {message}", ex.Message);
-            throw;
-        }
+        return await _problemsApi.GetProblems();
     }
+    
     public async Task<List<Problem>> SaveProblems(string name, string problemHash, int variationCount, CancellationToken ct = default)
     {
-        try
+        List<Problem> result = new();
+        for (var i = 0; i < variationCount; ++i)
         {
-            List<Problem> result = new();
-            for (int i = 0; i < variationCount; ++i)
-            {
-                int seed = new Random().Next();
-                var problem = await _geolinApi.GetProblemCondition(
-                    new ProblemConditionRequest()
-                    {
-                        Hash = problemHash,
-                        Seed = seed,
-                        Lang = LocalizationConstants.RussianLanguageCode
-                    });
-                var problemMongo = new ProblemRequest()
+            var seed = new Random().Next();
+            var problem = await _geolinApi.GetProblemCondition(
+                new ProblemConditionRequest()
                 {
-                    Statement = problem.Condition,
-                    GeolinAnsKey = new GeolinKey()
-                    {
-                        Hash = problemHash,
-                        Seed = seed
-                    }
-                };
-                var createdProblem = await _problemsApi.CreateProblem(problemMongo);
-                result.Add(createdProblem);
-                
-                await _problemsApi.GiveANameProblem(new ProblemWithNameRequest()
-                {
-                    Name = name,
-                    ProblemId = createdProblem.Id
+                    Hash = problemHash,
+                    Seed = seed,
+                    Lang = LocalizationConstants.RussianLanguageCode
                 });
-            }
-            return result;
+            var problemMongo = new ProblemRequest()
+            {
+                Statement = problem.Condition,
+                GeolinAnsKey = new GeolinKey()
+                {
+                    Hash = problemHash,
+                    Seed = seed
+                }
+            };
+            var createdProblem = await _problemsApi.CreateProblem(problemMongo);
+            result.Add(createdProblem);
+            
+            await _problemsApi.GiveANameProblem(new ProblemWithNameRequest()
+            {
+                Name = name,
+                ProblemId = createdProblem.Id
+            });
         }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error fetching problems from external problems service {message}", ex.Message);
-            throw;
-        }
+        return result;
     }
+    
     public async Task<List<Problem>> GetSavedProblemsByNames(string name, CancellationToken ct = default)
     {
         try
@@ -83,12 +69,8 @@ public class ProblemsService : IProblemsService
         {
             return new List<Problem>();
         }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error fetching problems by name {name} from external problems service: {message}", name, ex.Message);
-            throw;
-        }  
     }
+    
     public async Task<List<Problem>> GetSavedProblemsByTypes(string typeName, CancellationToken ct = default)
     {
         try
@@ -100,24 +82,13 @@ public class ProblemsService : IProblemsService
         {
             return new List<Problem>();
         }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error fetching problems by type {typeName} from external problems service: {message}", typeName, ex.Message);
-            throw;
-        }  
     }
+    
     public async Task<List<string>> GetAllTypes(CancellationToken ct = default)
     {
-        try
-        {
-            return await _problemsApi.GetTypes();
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error fetching problems from external problems service {message}", ex.Message);
-            throw;
-        }
+        return await _problemsApi.GetTypes();
     }
+    
     public async Task<Problem?> GetProblemFromDbAsync(string problemDbId, CancellationToken ct = default)
     {
         try  
@@ -128,11 +99,6 @@ public class ProblemsService : IProblemsService
         {
             _logger.LogWarning("Problem with ID {ProblemDbId} not found in LLMath-Problems DB.", problemDbId);
             return null;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error fetching problem {ProblemDbId} from LLMath-Problems DB: {message}", problemDbId, ex.Message);
-            throw;
         }
     }
 }

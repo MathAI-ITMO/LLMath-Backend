@@ -34,7 +34,7 @@ public class StatsControllerTests : BaseIntegrationTest
     public async Task GetUserDetails_WithValidUserId_ReturnsOk()
     {
         var user = await CreateAndLoginUserAsync();
-        var response = await AuthenticatedClient.GetAsync($"/api/stats/user-details/{user.Id}");
+        var response = await AuthenticatedClient!.GetAsync($"/api/stats/user-details/{user.Id}");
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
     }
@@ -43,7 +43,7 @@ public class StatsControllerTests : BaseIntegrationTest
     public async Task GetUserDetails_WithOtherUserId_ReturnsForbidden()
     {
         await CreateAndLoginUserAsync();
-        var response = await AuthenticatedClient.GetAsync("/api/stats/user-details/some-other-user-id");
+        var response = await AuthenticatedClient!.GetAsync("/api/stats/user-details/some-other-user-id");
 
         response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }

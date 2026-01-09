@@ -4,6 +4,7 @@ using MathLLMBackend.DataAccess.Contexts;
 using MathLLMBackend.DataAccess.Services;
 using MathLLMBackend.Domain.Entities;
 using MathLLMBackend.GeolinClient;
+using MathLLMBackend.GeolinClient.Options;
 using MathLLMBackend.ProblemsClient;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Hosting;
@@ -83,6 +84,12 @@ public class TestWebApplicationFactory : WebApplicationFactory<Program>
             services.AddAuthentication("Test")
                 .AddScheme<AuthenticationSchemeOptions, TestAuthenticationHandler>("Test", options => { });
 
+            services.Configure<GeolinClientOptions>(options =>
+            {
+                options.BaseAddress = "http://test-geolin.com";
+                options.AuthorizationHeader = "TestAuth";
+            });
+
             var warmupServiceDesc = services.SingleOrDefault(
                 d => d.ServiceType == typeof(WarmupService));
             if (warmupServiceDesc != null)
@@ -92,8 +99,9 @@ public class TestWebApplicationFactory : WebApplicationFactory<Program>
             services.AddScoped<WarmupService>(sp =>
             {
                 var dbContext = sp.GetRequiredService<AppDbContext>();
+                var roleManager = sp.GetRequiredService<RoleManager<IdentityRole>>();
                 var logger = sp.GetRequiredService<ILogger<WarmupService>>();
-                return new TestWarmupService(dbContext, logger);
+                return new TestWarmupService(dbContext, roleManager, logger);
             });
         });
 
