@@ -123,6 +123,7 @@ public class TestWebApplicationFactory : WebApplicationFactory<Program>
         };
 
         await userManager.CreateAsync(user, password);
+        await userManager.AddToRoleAsync(user, MathLLMBackend.Domain.Constants.RoleConstants.User);
         return user;
     }
 

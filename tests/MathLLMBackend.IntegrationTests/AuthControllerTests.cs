@@ -31,6 +31,7 @@ public class AuthControllerTests : BaseIntegrationTest
         var userInfo = await response.Content.ReadFromJsonAsync<UserInfoDto>();
         userInfo.Should().NotBeNull();
         userInfo!.Email.Should().Be(registerDto.Email);
+        userInfo.Role.Should().Be(MathLLMBackend.Domain.Constants.RoleConstants.User);
     }
 
     [Fact]

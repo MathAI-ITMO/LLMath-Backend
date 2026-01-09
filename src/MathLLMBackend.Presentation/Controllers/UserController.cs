@@ -30,12 +30,16 @@ namespace MathLLMBackend.Presentation.Controllers
                 return NotFound();
             }
 
+            var roles = await _userManager.GetRolesAsync(user);
+            var role = roles.FirstOrDefault() ?? string.Empty;
+
             return Ok(new UserInfoDto(
                 Guid.Parse(user.Id),
                 user.Email!,
                 user.FirstName,
                 user.LastName,
-                user.StudentGroup));
+                user.StudentGroup,
+                role));
         }
     }
 } 
