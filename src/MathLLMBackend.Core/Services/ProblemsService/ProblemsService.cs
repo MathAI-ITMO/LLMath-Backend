@@ -1,104 +1,92 @@
-using MathLLMBackend.Core.Constants;
-using MathLLMBackend.GeolinClient;
-using MathLLMBackend.GeolinClient.Models;
-using MathLLMBackend.ProblemsClient;
-using MathLLMBackend.ProblemsClient.Models;
-using Microsoft.Extensions.Logging;
-using Refit;
+using MathLLMBackend.DataAccess.Contexts;
+using MathLLMBackend.Domain.Entities;
+using MathLLMBackend.Domain.Enums;
+using Microsoft.EntityFrameworkCore;
 
 namespace MathLLMBackend.Core.Services.ProblemsService;
 
-public class ProblemsService : IProblemsService
+public class ProblemsService(AppDbContext dbContext) : IProblemsService
 {
-    private readonly IProblemsAPI _problemsApi;
-    private readonly IGeolinApi _geolinApi;
-    private readonly ILogger<ProblemsService> _logger;
-    public ProblemsService(IProblemsAPI problemsApi, IGeolinApi geolinApi, ILogger<ProblemsService> logger)
+    private readonly AppDbContext _dbContext = dbContext;
+
+    public async Task<IEnumerable<Problem>> GetProblems(CancellationToken ct)
     {
-        _problemsApi = problemsApi;
-        _geolinApi = geolinApi;
-        _logger = logger;
+        return await _dbContext.Problems
+            .Include(p => p.Types)
+            .Include(p => p.GeolinProblemData)
+            .ToListAsync(ct);
     }
-    public async Task<List<Problem>> GetSavedProblems(CancellationToken ct = default)
+
+    public async Task<IEnumerable<Problem>> GetProblemsByType(TaskType taskType, CancellationToken ct)
     {
-        return await _problemsApi.GetProblems();
+        return await _dbContext.Problems
+            .Include(p => p.Types)
+            .Include(p => p.GeolinProblemData)
+            .Where(p => p.Types.Any(t => t.TaskType == taskType))
+            .ToListAsync(ct);
     }
-    
-    public async Task<List<Problem>> SaveProblems(string name, string problemHash, int variationCount, CancellationToken ct = default)
+
+    public async Task<Problem?> GetProblem(Guid problemId, CancellationToken ct)
     {
-        List<Problem> result = new();
-        for (var i = 0; i < variationCount; ++i)
-        {
-            var seed = new Random().Next();
-            var problem = await _geolinApi.GetProblemCondition(
-                new ProblemConditionRequest()
-                {
-                    Hash = problemHash,
-                    Seed = seed,
-                    Lang = LocalizationConstants.RussianLanguageCode
-                });
-            var problemMongo = new ProblemRequest()
-            {
-                Statement = problem.Condition,
-                GeolinAnsKey = new GeolinKey()
-                {
-                    Hash = problemHash,
-                    Seed = seed
-                }
-            };
-            var createdProblem = await _problemsApi.CreateProblem(problemMongo);
-            result.Add(createdProblem);
-            
-            await _problemsApi.GiveANameProblem(new ProblemWithNameRequest()
-            {
-                Name = name,
-                ProblemId = createdProblem.Id
-            });
-        }
-        return result;
+        return await _dbContext.Problems
+            .Include(p => p.Types)
+            .Include(p => p.GeolinProblemData)
+            .FirstOrDefaultAsync(p => p.Id == problemId, ct);
     }
-    
-    public async Task<List<Problem>> GetSavedProblemsByNames(string name, CancellationToken ct = default)
+
+    public async Task<Problem> UpdateProblem(Problem problem, CancellationToken ct)
     {
-        try
+        _dbContext.Problems.Update(problem);
+        await _dbContext.SaveChangesAsync(ct);
+        return problem;
+    }
+
+    public async Task<Problem> CreateProblem(Problem problem, CancellationToken ct)
+    {
+        _dbContext.Problems.Add(problem);
+        await _dbContext.SaveChangesAsync(ct);
+        return problem;
+    }
+
+    public async Task DeleteProblem(Guid problemId, CancellationToken ct)
+    {
+        var problem = await _dbContext.Problems.FindAsync([problemId], ct);
+        if (problem != null)
         {
-            var problems = await _problemsApi.GetAllProblemsByName(name);
-            return problems;
-        }
-        catch (ApiException apiEx) when (apiEx.StatusCode == System.Net.HttpStatusCode.NotFound)
-        {
-            return new List<Problem>();
+            _dbContext.Problems.Remove(problem);
+            await _dbContext.SaveChangesAsync(ct);
         }
     }
-    
-    public async Task<List<Problem>> GetSavedProblemsByTypes(string typeName, CancellationToken ct = default)
+
+    public async Task ClearTypes(Guid problemId, CancellationToken ct)
     {
-        try
-        {
-            var problems = await _problemsApi.GetProblemsByType(typeName);
-            return problems;
-        }
-        catch (ApiException apiEx) when (apiEx.StatusCode == System.Net.HttpStatusCode.NotFound)
-        {
-            return new List<Problem>();
-        }
+        var types = await _dbContext.Set<ProblemTaskType>()
+            .Where(t => t.ProblemId == problemId)
+            .ToListAsync(ct);
+        
+        _dbContext.Set<ProblemTaskType>().RemoveRange(types);
+        await _dbContext.SaveChangesAsync(ct);
     }
-    
-    public async Task<List<string>> GetAllTypes(CancellationToken ct = default)
+
+    public async Task<Problem> SetType(Guid problemId, TaskType taskType, CancellationToken ct)
     {
-        return await _problemsApi.GetTypes();
-    }
-    
-    public async Task<Problem?> GetProblemFromDbAsync(string problemDbId, CancellationToken ct = default)
-    {
-        try  
+        var problem = await _dbContext.Problems
+            .Include(p => p.Types)
+            .FirstOrDefaultAsync(p => p.Id == problemId, ct);
+        
+        if (problem == null)
         {
-            return await _problemsApi.GetProblemById(problemDbId);
+            throw new KeyNotFoundException($"Problem with id {problemId} not found");
         }
-        catch (ApiException apiEx) when (apiEx.StatusCode == System.Net.HttpStatusCode.NotFound)
+
+        var existingType = problem.Types.FirstOrDefault(t => t.TaskType == taskType);
+        if (existingType == null)
         {
-            _logger.LogWarning("Problem with ID {ProblemDbId} not found in LLMath-Problems DB.", problemDbId);
-            return null;
+            var problemTaskType = new ProblemTaskType(problem, taskType);
+            _dbContext.Set<ProblemTaskType>().Add(problemTaskType);
+            await _dbContext.SaveChangesAsync(ct);
         }
+
+        return problem;
     }
 }

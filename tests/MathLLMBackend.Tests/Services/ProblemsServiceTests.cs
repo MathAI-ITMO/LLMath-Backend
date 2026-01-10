@@ -1,251 +1,165 @@
 using FluentAssertions;
 using MathLLMBackend.Core.Services.ProblemsService;
-using MathLLMBackend.GeolinClient;
-using MathLLMBackend.ProblemsClient;
-using MathLLMBackend.ProblemsClient.Models;
-using Microsoft.Extensions.Logging;
-using Moq;
-using Refit;
+using MathLLMBackend.DataAccess.Contexts;
+using MathLLMBackend.Domain.Entities;
+using MathLLMBackend.Domain.Enums;
+using Microsoft.EntityFrameworkCore;
 using Xunit;
 
 namespace MathLLMBackend.Tests.Services;
 
 public class ProblemsServiceTests
 {
-    private readonly Mock<IProblemsAPI> _problemsApiMock;
-    private readonly Mock<IGeolinApi> _geolinApiMock;
-    private readonly Mock<ILogger<ProblemsService>> _loggerMock;
+    private readonly AppDbContext _context;
     private readonly ProblemsService _service;
 
     public ProblemsServiceTests()
     {
-        _problemsApiMock = new Mock<IProblemsAPI>();
-        _geolinApiMock = new Mock<IGeolinApi>();
-        _loggerMock = new Mock<ILogger<ProblemsService>>();
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
+            .Options;
 
-        _service = new ProblemsService(
-            _problemsApiMock.Object,
-            _geolinApiMock.Object,
-            _loggerMock.Object);
+        _context = new AppDbContext(options);
+        _service = new ProblemsService(_context);
     }
 
     [Fact]
-    public async Task GetSavedProblems_ReturnsProblemsFromApi()
+    public async Task GetProblems_ReturnsAllProblems()
     {
-        var expectedProblems = new List<Problem>
-        {
-            new() { Id = "1", Statement = "Problem 1", Title = "Title 1" },
-            new() { Id = "2", Statement = "Problem 2", Title = "Title 2" }
-        };
+        // Arrange
+        var p1 = new Problem("sol1", "stmt1", "title1") { TheoryLink = "link1" };
+        var p2 = new Problem("sol2", "stmt2", "title2") { TheoryLink = "link2" };
+        _context.Problems.AddRange(p1, p2);
+        await _context.SaveChangesAsync();
 
-        _problemsApiMock
-            .Setup(x => x.GetProblems())
-            .ReturnsAsync(expectedProblems);
+        // Act
+        var result = await _service.GetProblems(CancellationToken.None);
 
-        var result = await _service.GetSavedProblems();
-
+        // Assert
         result.Should().HaveCount(2);
-        result.Should().BeEquivalentTo(expectedProblems);
+        result.Should().Contain(p => p.Title == "title1");
+        result.Should().Contain(p => p.Title == "title2");
     }
 
     [Fact]
-    public async Task GetSavedProblems_WhenApiThrows_PropagatesException()
+    public async Task GetProblemsByType_ReturnsOnlyCorrectType()
     {
-        _problemsApiMock
-            .Setup(x => x.GetProblems())
-            .ThrowsAsync(new Exception("API Error"));
+        // Arrange
+        var p1 = new Problem("sol1", "stmt1", "title1") { TheoryLink = "link1" };
+        var p2 = new Problem("sol2", "stmt2", "title2") { TheoryLink = "link2" };
+        _context.Problems.AddRange(p1, p2);
+        
+        var pt1 = new ProblemTaskType(p1, TaskType.Learning);
+        var pt2 = new ProblemTaskType(p2, TaskType.Exam);
+        _context.Set<ProblemTaskType>().AddRange(pt1, pt2);
+        
+        await _context.SaveChangesAsync();
 
-        var act = async () => await _service.GetSavedProblems();
+        // Act
+        var result = await _service.GetProblemsByType(TaskType.Learning, CancellationToken.None);
 
-        await act.Should().ThrowAsync<Exception>().WithMessage("API Error");
-    }
-
-    [Fact]
-    public async Task GetSavedProblemsByTypes_ReturnsProblemsFromApi()
-    {
-        const string typeName = "Learning";
-        var expectedProblems = new List<Problem>
-        {
-            new() { Id = "1", Statement = "Problem 1", Title = "Title 1" }
-        };
-
-        _problemsApiMock
-            .Setup(x => x.GetProblemsByType(typeName))
-            .ReturnsAsync(expectedProblems);
-
-        var result = await _service.GetSavedProblemsByTypes(typeName);
-
+        // Assert
         result.Should().HaveCount(1);
-        result.Should().BeEquivalentTo(expectedProblems);
+        result.First().Title.Should().Be("title1");
     }
 
     [Fact]
-    public async Task GetSavedProblemsByTypes_WhenApiReturns404_ReturnsEmptyList()
+    public async Task GetProblem_ReturnsCorrectProblem()
     {
-        const string typeName = "NonExistent";
+        // Arrange
+        var p1 = new Problem("sol1", "stmt1", "title1") { TheoryLink = "link1" };
+        _context.Problems.Add(p1);
+        await _context.SaveChangesAsync();
 
-        var apiException = await ApiException.Create(
-            new HttpRequestMessage(),
-            HttpMethod.Get,
-            new HttpResponseMessage(System.Net.HttpStatusCode.NotFound),
-            new RefitSettings());
+        // Act
+        var result = await _service.GetProblem(p1.Id, CancellationToken.None);
 
-        _problemsApiMock
-            .Setup(x => x.GetProblemsByType(typeName))
-            .ThrowsAsync(apiException);
-
-        var result = await _service.GetSavedProblemsByTypes(typeName);
-
-        result.Should().BeEmpty();
-    }
-
-    [Fact]
-    public async Task GetSavedProblemsByTypes_WhenApiThrowsNon404_PropagatesException()
-    {
-        const string typeName = "Learning";
-
-        _problemsApiMock
-            .Setup(x => x.GetProblemsByType(typeName))
-            .ThrowsAsync(new Exception("Server Error"));
-
-        var act = async () => await _service.GetSavedProblemsByTypes(typeName);
-
-        await act.Should().ThrowAsync<Exception>().WithMessage("Server Error");
-    }
-
-    [Fact]
-    public async Task GetProblemFromDbAsync_ReturnsProblemFromApi()
-    {
-        const string problemId = "problem1";
-        var expectedProblem = new Problem
-        {
-            Id = problemId,
-            Statement = "Test Statement",
-            Title = "Test Title"
-        };
-
-        _problemsApiMock
-            .Setup(x => x.GetProblemById(problemId))
-            .ReturnsAsync(expectedProblem);
-
-        var result = await _service.GetProblemFromDbAsync(problemId);
-
+        // Assert
         result.Should().NotBeNull();
-        result!.Id.Should().Be(problemId);
-        result.Statement.Should().Be("Test Statement");
+        result!.Title.Should().Be("title1");
     }
 
     [Fact]
-    public async Task GetProblemFromDbAsync_WhenProblemNotFound_ReturnsNull()
+    public async Task CreateProblem_AddsProblemToDb()
     {
-        const string problemId = "nonExistent";
+        // Arrange
+        var p = new Problem("sol", "stmt", "title") { TheoryLink = "link" };
 
-        var apiException = await ApiException.Create(
-            new HttpRequestMessage(),
-            HttpMethod.Get,
-            new HttpResponseMessage(System.Net.HttpStatusCode.NotFound),
-            new RefitSettings());
+        // Act
+        var result = await _service.CreateProblem(p, CancellationToken.None);
 
-        _problemsApiMock
-            .Setup(x => x.GetProblemById(problemId))
-            .ThrowsAsync(apiException);
-
-        var result = await _service.GetProblemFromDbAsync(problemId);
-
-        result.Should().BeNull();
+        // Assert
+        var dbProblem = await _context.Problems.FindAsync(result.Id);
+        dbProblem.Should().NotBeNull();
+        dbProblem!.Title.Should().Be("title");
     }
 
     [Fact]
-    public async Task GetProblemFromDbAsync_WhenApiThrowsNon404_PropagatesException()
+    public async Task UpdateProblem_UpdatesExistingProblem()
     {
-        const string problemId = "problem1";
+        // Arrange
+        var p = new Problem("sol", "stmt", "title") { TheoryLink = "link" };
+        _context.Problems.Add(p);
+        await _context.SaveChangesAsync();
 
-        _problemsApiMock
-            .Setup(x => x.GetProblemById(problemId))
-            .ThrowsAsync(new Exception("Server Error"));
+        p.Title = "new title";
 
-        var act = async () => await _service.GetProblemFromDbAsync(problemId);
+        // Act
+        await _service.UpdateProblem(p, CancellationToken.None);
 
-        await act.Should().ThrowAsync<Exception>().WithMessage("Server Error");
+        // Assert
+        var dbProblem = await _context.Problems.FindAsync(p.Id);
+        dbProblem!.Title.Should().Be("new title");
     }
 
     [Fact]
-    public async Task GetSavedProblemsByNames_ReturnsProblemsFromApi()
+    public async Task DeleteProblem_RemovesFromDb()
     {
-        const string name = "TestName";
-        var expectedProblems = new List<Problem>
-        {
-            new() { Id = "1", Statement = "Problem 1", Title = "Title 1" }
-        };
+        // Arrange
+        var p = new Problem("sol", "stmt", "title") { TheoryLink = "link" };
+        _context.Problems.Add(p);
+        await _context.SaveChangesAsync();
 
-        _problemsApiMock
-            .Setup(x => x.GetAllProblemsByName(name))
-            .ReturnsAsync(expectedProblems);
+        // Act
+        await _service.DeleteProblem(p.Id, CancellationToken.None);
 
-        var result = await _service.GetSavedProblemsByNames(name);
-
-        result.Should().HaveCount(1);
-        result.Should().BeEquivalentTo(expectedProblems);
+        // Assert
+        var dbProblem = await _context.Problems.FindAsync(p.Id);
+        dbProblem.Should().BeNull();
     }
 
     [Fact]
-    public async Task GetSavedProblemsByNames_WhenApiReturns404_ReturnsEmptyList()
+    public async Task SetType_AddsNewType()
     {
-        const string name = "NonExistent";
+        // Arrange
+        var p = new Problem("sol", "stmt", "title") { TheoryLink = "link" };
+        _context.Problems.Add(p);
+        await _context.SaveChangesAsync();
 
-        var apiException = await ApiException.Create(
-            new HttpRequestMessage(),
-            HttpMethod.Get,
-            new HttpResponseMessage(System.Net.HttpStatusCode.NotFound),
-            new RefitSettings());
+        // Act
+        await _service.SetType(p.Id, TaskType.Learning, CancellationToken.None);
 
-        _problemsApiMock
-            .Setup(x => x.GetAllProblemsByName(name))
-            .ThrowsAsync(apiException);
-
-        var result = await _service.GetSavedProblemsByNames(name);
-
-        result.Should().BeEmpty();
+        // Assert
+        var dbProblem = await _context.Problems.Include(x => x.Types).FirstOrDefaultAsync(x => x.Id == p.Id);
+        dbProblem!.Types.Should().HaveCount(1);
+        dbProblem.Types.First().TaskType.Should().Be(TaskType.Learning);
     }
 
     [Fact]
-    public async Task GetSavedProblemsByNames_WhenApiThrowsNon404_PropagatesException()
+    public async Task ClearTypes_RemovesAllTypes()
     {
-        const string name = "TestName";
+        // Arrange
+        var p = new Problem("sol", "stmt", "title") { TheoryLink = "link" };
+        _context.Problems.Add(p);
+        var pt = new ProblemTaskType(p, TaskType.Learning);
+        _context.Set<ProblemTaskType>().Add(pt);
+        await _context.SaveChangesAsync();
 
-        _problemsApiMock
-            .Setup(x => x.GetAllProblemsByName(name))
-            .ThrowsAsync(new Exception("Server Error"));
+        // Act
+        await _service.ClearTypes(p.Id, CancellationToken.None);
 
-        var act = async () => await _service.GetSavedProblemsByNames(name);
-
-        await act.Should().ThrowAsync<Exception>().WithMessage("Server Error");
-    }
-
-    [Fact]
-    public async Task GetAllTypes_ReturnsTypesFromApi()
-    {
-        var expectedTypes = new List<string> { "Type1", "Type2", "Type3" };
-
-        _problemsApiMock
-            .Setup(x => x.GetTypes())
-            .ReturnsAsync(expectedTypes);
-
-        var result = await _service.GetAllTypes();
-
-        result.Should().HaveCount(3);
-        result.Should().BeEquivalentTo(expectedTypes);
-    }
-
-    [Fact]
-    public async Task GetAllTypes_WhenApiThrows_PropagatesException()
-    {
-        _problemsApiMock
-            .Setup(x => x.GetTypes())
-            .ThrowsAsync(new Exception("API Error"));
-
-        var act = async () => await _service.GetAllTypes();
-
-        await act.Should().ThrowAsync<Exception>().WithMessage("API Error");
+        // Assert
+        var types = await _context.Set<ProblemTaskType>().Where(t => t.ProblemId == p.Id).ToListAsync();
+        types.Should().BeEmpty();
     }
 }

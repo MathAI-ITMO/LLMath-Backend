@@ -52,7 +52,7 @@ public class StatsService : IStatsService
                 UserTaskId = ut.Id,
                 DisplayName = ut.DisplayName,
                 ChatId = ut.AssociatedChatId,
-                TaskType = ut.TaskType
+                TaskType = ut.ProblemTaskType.TaskType
             })
             .ToListAsync(ct);
 
@@ -63,7 +63,7 @@ public class StatsService : IStatsService
                 UserTaskId = ut.Id,
                 DisplayName = ut.DisplayName,
                 ChatId = ut.AssociatedChatId,
-                TaskType = ut.TaskType
+                TaskType = ut.ProblemTaskType.TaskType
             })
             .ToListAsync(ct);
 

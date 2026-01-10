@@ -1,3 +1,3 @@
 namespace MathLLMBackend.Presentation.Dtos.Chats;
 
-public record CreateChatRequestDto(string Name, string? ProblemHash);
+public record CreateChatRequestDto(string Name, Guid? ProblemId);

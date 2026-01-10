@@ -5,7 +5,6 @@ using MathLLMBackend.Domain.Entities;
 using MathLLMBackend.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using MathLLMBackend.ProblemsClient.Models;
 using MathLLMBackend.Core.Services.ProblemsService;
 using MathLLMBackend.Domain.Exceptions;
 
@@ -32,45 +31,29 @@ public class UserTaskService(
 
     public async Task<IEnumerable<UserTask>> GetOrCreateUserTasksAsync(string userId, TaskType taskType, CancellationToken cancellationToken = default)
     {
-        if (!TaskTypeToProblemTypeName.TryGetValue(taskType, out var typeName))
-        {
-            _logger.LogWarning("Task type {TaskType} is not configured. Returning empty tasks.", taskType);
-            return Enumerable.Empty<UserTask>();
-        }
-
-        _logger.LogInformation("Fetching problems of type '{TypeName}' (taskType={TaskType}) from LLMath-Problems for user {UserId}", typeName, taskType, userId);
-
-        var problemsFromDb = new List<Problem>();
+        IEnumerable<Problem> problems;
         try
         {
-            problemsFromDb = await _problemsService.GetSavedProblemsByTypes(typeName, cancellationToken);
+            problems = (await _problemsService.GetProblemsByType(taskType, cancellationToken)).ToArray();
         }
-        catch (Exception ex)
+        catch (Exception e)
         {
-            _logger.LogError(ex, "Error fetching problems from LLMath-Problems for user {UserId}", userId);
-            return Enumerable.Empty<UserTask>();
+            _logger.LogError(e, "Error while getting problems by type {TaskType}", taskType);
+            return [];
         }
 
-        if (problemsFromDb.Count == 0)
+        if (!problems.Any())
         {
-            _logger.LogInformation("No problems of type '{TypeName}' found in LLMath-Problems database.", typeName);
+            _logger.LogInformation("No problems of type '{TypeName}' found", taskType);
             return [];
         }
 
         var newOrExistingUserTasks = new List<UserTask>();
 
-        foreach (var problemFromDb in problemsFromDb)
+        foreach (var problem in problems)
         {
-            if (string.IsNullOrEmpty(problemFromDb.Id))
-            {
-                _logger.LogWarning("Problem from DB has null or empty ID. Skipping.");
-                continue;
-            }
-
             var existingUserTask = await _context.UserTasks
-                .FirstOrDefaultAsync(ut => ut.ApplicationUserId == userId
-                    && ut.ProblemHash == problemFromDb.Id
-                    && ut.TaskType == taskType, cancellationToken);
+                .FirstOrDefaultAsync(ut => ut.ApplicationUserId == userId && ut.ProblemId == problem.Id, cancellationToken: cancellationToken);
             
             if (existingUserTask != null)
             {
@@ -78,19 +61,20 @@ public class UserTaskService(
             }
             else
             {
-                var displayName = !string.IsNullOrWhiteSpace(problemFromDb.Title)
-                    ? problemFromDb.Title
-                    : GetTruncatedStatement(problemFromDb.Statement);
+                var displayName = !string.IsNullOrWhiteSpace(problem.Title)
+                    ? problem.Title
+                    : GetTruncatedStatement(problem.Statement);
                 
                 var newTask = new UserTask
                 {
                     ApplicationUserId = userId,
-                    ProblemId = problemFromDb.Id,
-                    ProblemHash = problemFromDb.Id,
+                    ProblemId = problem.Id,
                     DisplayName = displayName,
                     TaskType = taskType,
+                    ProblemTaskType = problem.Types.First(t => t.TaskType == taskType),
                     Status = UserTaskStatus.NotStarted,
-                    AssociatedChatId = null
+                    AssociatedChatId = null,
+                    ProblemHash = problem.Id.ToString()
                 };
                 
                 _context.UserTasks.Add(newTask);
@@ -120,10 +104,10 @@ public class UserTaskService(
         }
 
         var chatId = await _chatService.GetOrCreateProblemChatAsync(
-            userTask.ProblemHash, 
+            userTask.ProblemId, 
             userId, 
             userTask.DisplayName, 
-            userTask.TaskType, 
+            userTask.ProblemTaskType.TaskType,
             cancellationToken);
 
         if (chatId == Guid.Empty)

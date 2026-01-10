@@ -72,39 +72,36 @@ public class UserTasksControllerTests : BaseIntegrationTest
     [Fact]
     public async Task StartUserTask_WithValidTask_ReturnsOk()
     {
-        Factory.ProblemsApiMock
-            .Setup(x => x.GetProblemsByType(It.IsAny<string>()))
-            .ReturnsAsync(new List<MathLLMBackend.ProblemsClient.Models.Problem>
-            {
-                new()
-                {
-                    Id = "test-problem-id",
-                    Title = "Test Problem",
-                    Statement = "Test problem statement"
-                }
-            });
+        await CreateAndLoginUserAsync();
 
-        Factory.ProblemsApiMock
-            .Setup(x => x.GetProblemById(It.IsAny<string>()))
-            .ReturnsAsync(new MathLLMBackend.ProblemsClient.Models.Problem
+        Guid taskId;
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var dbContext = scope.ServiceProvider.GetRequiredService<MathLLMBackend.DataAccess.Contexts.AppDbContext>();
+            var problem = new Problem("sol", "stmt", "title") { Id = Guid.NewGuid(), TheoryLink = "link" };
+            var problemTaskType = new ProblemTaskType(problem, TaskType.Learning);
+            problem.Types = new List<ProblemTaskType> { problemTaskType };
+            dbContext.Problems.Add(problem);
+            
+            var userTask = new UserTask
             {
-                Id = "test-problem-id",
-                Statement = "Test problem",
-                LlmSolution = "Test solution"
-            });
+                ApplicationUserId = TestUser!.Id,
+                ProblemId = problem.Id,
+                ProblemHash = problem.Id.ToString(),
+                DisplayName = "Test Task",
+                ProblemTaskType = problemTaskType,
+                TaskType = TaskType.Learning,
+                Status = UserTaskStatus.NotStarted
+            };
+            dbContext.UserTasks.Add(userTask);
+            await dbContext.SaveChangesAsync();
+            taskId = userTask.Id;
+        }
 
         Factory.LlmServiceMock
             .Setup(x => x.GenerateNextMessageAsync(It.IsAny<List<MathLLMBackend.Domain.Entities.Message>>(), It.IsAny<TaskType>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync("Test response");
 
-        await CreateAndLoginUserAsync();
-        
-        var getUserTasksResponse = await AuthenticatedGetAsync("/api/usertasks?taskType=1");
-        getUserTasksResponse.StatusCode.Should().Be(HttpStatusCode.OK);
-        var tasks = await getUserTasksResponse.Content.ReadFromJsonAsync<List<MathLLMBackend.Presentation.Dtos.Tasks.UserTaskDto>>();
-        
-        tasks.Should().NotBeNull().And.NotBeEmpty();
-        var taskId = tasks!.First().Id;
         var response = await AuthenticatedPostAsync($"/api/usertasks/{taskId}/start");
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -113,17 +110,23 @@ public class UserTasksControllerTests : BaseIntegrationTest
     [Fact]
     public async Task CompleteUserTask_WithValidTask_ReturnsOk()
     {
-
         await CreateAndLoginUserAsync();
         
         using var scope = Factory.Services.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<MathLLMBackend.DataAccess.Contexts.AppDbContext>();
+        
+        var problem = new Problem("sol", "stmt", "title") { Id = Guid.NewGuid(), TheoryLink = "link" };
+        var problemTaskType = new ProblemTaskType(problem, TaskType.Learning);
+        problem.Types = new List<ProblemTaskType> { problemTaskType };
+        dbContext.Problems.Add(problem);
+
         var userTask = new MathLLMBackend.Domain.Entities.UserTask
         {
             ApplicationUserId = TestUser!.Id,
-            ProblemId = "test-problem-id",
+            ProblemId = problem.Id,
             ProblemHash = "test-problem-id",
             DisplayName = "Test Task",
+            ProblemTaskType = problemTaskType,
             TaskType = TaskType.Learning,
             Status = MathLLMBackend.Domain.Enums.UserTaskStatus.InProgress
         };

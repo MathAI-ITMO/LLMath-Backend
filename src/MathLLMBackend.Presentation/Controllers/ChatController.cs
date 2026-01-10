@@ -31,9 +31,9 @@ namespace MathLLMBackend.Presentation.Controllers
         public async Task<IActionResult> CreateChat([FromBody] CreateChatRequestDto dto, [FromJwt] JwtUser user, CancellationToken ct)
         {
             var chat = new Chat(dto.Name, user.Id);
-            var createdChat = dto.ProblemHash == null
+            var createdChat = dto.ProblemId == null
                 ? await _chatService.Create(chat, ct)
-                : await _chatService.Create(chat, dto.ProblemHash, TaskType.Default, ct);
+                : await _chatService.Create(chat, dto.ProblemId!.Value, TaskType.Default, ct);
             
             return Ok(
                 new ChatDto(createdChat.Id, createdChat.Name, createdChat.Type?.ToString() ?? ChatConstants.DefaultChatTypeName, null, null)

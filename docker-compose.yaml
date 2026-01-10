@@ -15,30 +15,6 @@ services:
       timeout: 5s
       retries: 5
     command: ["postgres", "-c", "log_statement=all", "-c", "log_destination=stderr"]
-  mongo:
-    image: mongo:latest
-    restart: always
-    environment:
-      MONGO_INITDB_ROOT_USERNAME: mongoadmin
-      MONGO_INITDB_ROOT_PASSWORD: mongoadmin
-    ports:
-      - 27017:27017
-    healthcheck:
-      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  problems:
-    image: ghcr.io/mathai-itmo/llmath-problems:latest
-    restart: always
-    environment:
-      - CONNECTION_STRING=mongodb://mongoadmin:mongoadmin@mongo:27017/?authSource=admin
-    ports:
-      - 8000:8000
-    depends_on:
-      mongo:
-        condition: service_healthy
 
   geolin:
     image: ghcr.io/mathdepitmo/geolin-milestones:latest

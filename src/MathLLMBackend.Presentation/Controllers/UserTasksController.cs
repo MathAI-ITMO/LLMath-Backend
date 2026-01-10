@@ -35,7 +35,7 @@ public class UserTasksController : ControllerBase
             t.Id,
             t.ProblemId,
             t.DisplayName,
-            t.TaskType,
+            t.ProblemTaskType.TaskType,
             t.Status,
             t.AssociatedChatId
         ));
@@ -55,7 +55,7 @@ public class UserTasksController : ControllerBase
             task.Id,
             task.ProblemId,
             task.DisplayName,
-            task.TaskType,
+            task.ProblemTaskType.TaskType,
             task.Status,
             task.AssociatedChatId
         );
@@ -79,7 +79,7 @@ public class UserTasksController : ControllerBase
             completedTask.Id,
             completedTask.ProblemId,
             completedTask.DisplayName,
-            completedTask.TaskType,
+            completedTask.ProblemTaskType.TaskType,
             completedTask.Status,
             completedTask.AssociatedChatId
         );

@@ -7,7 +7,6 @@ using MathLLMBackend.Domain.Enums;
 using MathLLMBackend.Domain.Exceptions;
 using MathLLMBackend.Core.Services.ProblemsService;
 using MathLLMBackend.Domain.Models;
-using MathLLMBackend.ProblemsClient.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
@@ -16,14 +15,12 @@ namespace MathLLMBackend.Core.Services.ChatService;
 public class ChatService(
     AppDbContext dbContext,
     ILlmService llmService,
-    IProblemsService problemsService,
     IPromptService promptService,
     ILogger<ChatService> logger)
     : IChatService
 {
     private readonly AppDbContext _dbContext = dbContext;
     private readonly ILlmService _llmService = llmService;
-    private readonly IProblemsService _problemsService = problemsService;
     private readonly IPromptService _promptService = promptService;
     private readonly ILogger<ChatService> _logger = logger;
 
@@ -43,17 +40,17 @@ public class ChatService(
         return chatEntry.Entity;
     }
 
-    public async Task<Chat> Create(Chat chat, string problemDbId, TaskType explicitTaskType, CancellationToken ct)
+    public async Task<Chat> Create(Chat chat, Guid problemId, TaskType explicitTaskType, CancellationToken ct)
     {
         chat.Type = ChatType.ProblemSolver;
         _logger.LogInformation("Creating chat for ProblemSolver. ProblemDB_ID: {ProblemDbId}, ExplicitTaskType: {ExplicitTaskType}", 
-            problemDbId, explicitTaskType);
+            problemId, explicitTaskType);
 
-        var problem = await GetProblem(problemDbId, ct);
+        var problem = await GetProblem(problemId, ct);
         var llmSolution = ExtractLlmSolution(problem);
         
         var newChat = await CreateChatEntityAsync(chat, ct);
-        await AssociateUserTaskIfExistsAsync(newChat, problemDbId, chat.UserId, ct);
+        await AssociateUserTaskIfExistsAsync(newChat, problemId, chat.UserId, ct);
         
         var messages = BuildInitialMessages(newChat, problem, llmSolution, explicitTaskType);
         await _dbContext.Messages.AddRangeAsync(messages, ct);
@@ -66,14 +63,15 @@ public class ChatService(
         return newChat;
     }
 
-    private async Task<Problem> GetProblem(string problemDbId, CancellationToken ct)
+    private async Task<Problem> GetProblem(Guid id, CancellationToken ct)
     {
-        var problem = await _problemsService.GetProblemFromDbAsync(problemDbId, ct);
+        var problem = await _dbContext.Problems
+            .FirstOrDefaultAsync(p => p.Id == id, ct);
         
         if (problem == null)
         {
-            _logger.LogError("Problem with ID {ProblemDbId} not found in LLMath-Problems database.", problemDbId);
-            throw new NotFoundException($"Problem with ID {problemDbId} not found in LLMath-Problems database.");
+            _logger.LogError("Problem with ID {ProblemDbId} not found in LLMath-Problems database.", id);
+            throw new NotFoundException($"Problem with ID {id} not found in LLMath-Problems database.");
         }
 
         var conditionSnippet = problem.Statement.Length > DisplayConstants.MaxSnippetLength 
@@ -100,10 +98,10 @@ public class ChatService(
         return chatEntry.Entity;
     }
 
-    private async Task AssociateUserTaskIfExistsAsync(Chat chat, string problemDbId, string userId, CancellationToken ct)
+    private async Task AssociateUserTaskIfExistsAsync(Chat chat, Guid problemDbId, string userId, CancellationToken ct)
     {
         var userTask = await _dbContext.UserTasks
-            .FirstOrDefaultAsync(ut => ut.ProblemHash == problemDbId 
+            .FirstOrDefaultAsync(ut => ut.ProblemId == problemDbId
                 && ut.ApplicationUserId == userId 
                 && ut.Status == UserTaskStatus.InProgress, ct);
         
@@ -241,15 +239,15 @@ public class ChatService(
 
     private async Task<TaskType> DetermineTaskTypeAsync(Chat currentChat, CancellationToken ct)
     {
-        TaskType taskType = TaskType.Default; 
+        var taskType = TaskType.Default;
+
+        if (currentChat.Type != ChatType.ProblemSolver) 
+            return taskType;
         
-        if (currentChat.Type == ChatType.ProblemSolver)
-        {
-            var userTask = await _dbContext.UserTasks
-                .FirstOrDefaultAsync(ut => ut.AssociatedChatId == currentChat.Id, ct);
-            taskType = userTask?.TaskType ?? DetermineTaskTypeFromSystemPrompt(currentChat);
-        }
-        
+        var userTask = await _dbContext.UserTasks.Include(userTask => userTask.ProblemTaskType)
+            .FirstOrDefaultAsync(ut => ut.AssociatedChatId == currentChat.Id, ct);
+        taskType = userTask?.ProblemTaskType.TaskType ?? DetermineTaskTypeFromSystemPrompt(currentChat);
+
         return taskType;
     }
 
@@ -347,7 +345,7 @@ public class ChatService(
         return chat;
     }
 
-    public async Task<Guid> GetOrCreateProblemChatAsync(string problemHash, string userId, string taskDisplayName, TaskType taskType, CancellationToken ct)
+    public async Task<Guid> GetOrCreateProblemChatAsync(Guid problemId, string userId, string taskDisplayName, TaskType taskType, CancellationToken ct)
     {
         var chatName = $"{taskDisplayName} {DateTime.Now:dd.MM.yyyy HH:mm}";
         var newChat = new Chat
@@ -357,7 +355,7 @@ public class ChatService(
             Type = ChatType.ProblemSolver
         };
 
-        var createdChat = await Create(newChat, problemHash, taskType, ct);
+        var createdChat = await Create(newChat, problemId, taskType, ct);
         return createdChat.Id;
     }
 
@@ -371,7 +369,7 @@ public class ChatService(
         }
 
         var userTask = await _dbContext.UserTasks
-            .AsNoTracking()
+            .AsNoTracking().Include(userTask => userTask.ProblemTaskType)
             .FirstOrDefaultAsync(ut => ut.AssociatedChatId == chatId, ct);
         
         if (userTask == null)
@@ -379,18 +377,11 @@ public class ChatService(
             return new ChatDetailsModel(null, null);
         }
 
-        TaskType? taskType = userTask.TaskType;
+        TaskType? taskType = userTask.ProblemTaskType.TaskType;
         string? theoryLink = null;
 
-        try
-        {
-            var problem = await _problemsService.GetProblemFromDbAsync(userTask.ProblemId, ct);
-            theoryLink = problem?.TheoryLink;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "Failed to get theory link for problem {ProblemId}", userTask.ProblemId);
-        }
+        var problem = await _dbContext.Problems.FirstOrDefaultAsync(p => p.Id == userTask.ProblemId, ct);
+        theoryLink = problem?.TheoryLink;
 
         return new ChatDetailsModel(taskType, theoryLink);
     }
@@ -410,7 +401,7 @@ public class ChatService(
         }
 
         var userTask = await _dbContext.UserTasks
-            .AsNoTracking()
+            .AsNoTracking().Include(userTask => userTask.ProblemTaskType)
             .FirstOrDefaultAsync(ut => ut.AssociatedChatId == chatId, ct);
         
         if (userTask == null)
@@ -418,18 +409,11 @@ public class ChatService(
             return new ChatDetailsModel(null, null);
         }
 
-        TaskType? taskType = userTask.TaskType;
+        TaskType? taskType = userTask.ProblemTaskType.TaskType;
         string? theoryLink = null;
 
-        try
-        {
-            var problem = await _problemsService.GetProblemFromDbAsync(userTask.ProblemId, ct);
-            theoryLink = problem?.TheoryLink;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "Failed to get theory link for problem {ProblemId}", userTask.ProblemId);
-        }
+        var problem = await _dbContext.Problems.FirstOrDefaultAsync(p => p.Id == userTask.ProblemId, ct);
+        theoryLink = problem?.TheoryLink;
 
         return new ChatDetailsModel(taskType, theoryLink);
     }

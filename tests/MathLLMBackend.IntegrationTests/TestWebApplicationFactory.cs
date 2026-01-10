@@ -5,7 +5,6 @@ using MathLLMBackend.DataAccess.Services;
 using MathLLMBackend.Domain.Entities;
 using MathLLMBackend.GeolinClient;
 using MathLLMBackend.GeolinClient.Options;
-using MathLLMBackend.ProblemsClient;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity;
@@ -22,7 +21,6 @@ public class TestWebApplicationFactory : WebApplicationFactory<Program>
     private readonly string _databaseName = "TestDb_" + Guid.NewGuid();
     
     public Mock<IGeolinApi> GeolinApiMock { get; } = new();
-    public Mock<IProblemsAPI> ProblemsApiMock { get; } = new();
     public Mock<ILlmService> LlmServiceMock { get; } = new();
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
@@ -57,14 +55,6 @@ public class TestWebApplicationFactory : WebApplicationFactory<Program>
                 services.Remove(geolinApiDescriptor);
             }
             services.AddSingleton(GeolinApiMock.Object);
-
-            var problemsApiDescriptor = services.SingleOrDefault(
-                d => d.ServiceType == typeof(IProblemsAPI));
-            if (problemsApiDescriptor != null)
-            {
-                services.Remove(problemsApiDescriptor);
-            }
-            services.AddSingleton(ProblemsApiMock.Object);
 
             var llmServiceDescriptor = services.SingleOrDefault(
                 d => d.ServiceType == typeof(ILlmService));
