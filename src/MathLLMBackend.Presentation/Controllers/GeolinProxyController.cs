@@ -44,11 +44,11 @@ namespace MathLLMBackend.Presentation.Controllers
                 });
             }
 
-            var result = await _geolinService.CheckAnswerAsync(
+            var result = await _geolinService.CheckAnswer(
                 request.Hash, 
                 request.AnswerAttempt, 
                 request.Seed, 
-                request.ProblemParams, 
+                request.ProblemParams,
                 ct);
 
             var response = new CheckAnswerResponse

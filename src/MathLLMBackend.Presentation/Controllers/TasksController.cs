@@ -1,4 +1,3 @@
-using MathLLMBackend.Core.Constants;
 using MathLLMBackend.Core.Services.GeolinService;
 using MathLLMBackend.Domain.Constants;
 using MathLLMBackend.Presentation.Dtos.Tasks;
@@ -18,26 +17,22 @@ public class TasksController : ControllerBase
         _geolinService = geolinService;
     }
 
-    [HttpGet("problems")]
+    [HttpGet("problem/{prefixName}")]
     [Authorize(Roles = Role.Admin)]
-    public async Task<IActionResult> GetProblems(
-        [FromQuery] int page = GeolinConstants.Pagination.DefaultPage, 
-        [FromQuery] int size = GeolinConstants.Pagination.DefaultPageSize, 
-        [FromQuery] string? prefixName = "", 
+    public async Task<IActionResult> GetProblemByPrefix(
+        [FromRoute] string prefixName,
+        [FromQuery] int? seed,
         CancellationToken ct = default)
     {
-        var response = await _geolinService.GetProblems(page, size, prefixName, ct);
-        
-        var problems = response.Problems.Select(p => new ProblemDto(
-            Hash: p.Hash,
-            Name: p.Name,
-            Description: p.Description,
-            Condition: p.ConditionRu
-        )).ToList();
+        var response = await _geolinService.GetProblem(prefixName, seed, ct);
 
-        var result = new ProblemsPageDto(
-            Problems: problems,
-            Number: response.Number
+        var result = new ProblemDto(
+            Hash: response.Hash,
+            Name: response.Name,
+            Description: response.Description,
+            Condition: response.Condition,
+            Seed: response.Seed,
+            Params: response.ProblemParams
         );
 
         return Ok(result);

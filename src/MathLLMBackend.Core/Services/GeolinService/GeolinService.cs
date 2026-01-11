@@ -17,41 +17,41 @@ public class GeolinService : IGeolinService
         _geolinApi = geolinApi;
     }
 
-    public async Task<ProblemPageResponse> GetProblems(int page, int size, string? prefixName = "", CancellationToken ct = default)
+    public async Task<ProblemData> GetProblem(string prefix, int? seed = null, CancellationToken ct = default)
     {
-        return await _geolinApi.GetProblemsInfo(page, size, prefixName);
-    }
-
-    public async Task<ProblemData> GetProblemDataByPrefixAsync(string prefix, int? seed = null, CancellationToken ct = default)
-    {
-        var problem = await FindProblemByPrefixAsync(prefix, ct);
+        var problem = await FindProblemByPrefix(prefix, ct);
         if (problem == null)
         {
             throw new InvalidOperationException($"No problem found for prefix '{prefix}'.");
         }
 
-        var seedToUse = seed ?? _random.Next(1, 1000000000);
-        var condition = await GetProblemConditionAsync(problem.Hash, seedToUse, ct);
+        seed = seed ?? _random.Next(1, 1000000000);
+        var condition = await _geolinApi.GetProblemCondition(new ProblemConditionRequest
+        {
+            Hash = problem.Hash,
+            Seed = seed,
+            Lang = LocalizationConstants.RussianLanguageCode
+        }, ct);
+        
         if (condition == null)
         {
             throw new InvalidOperationException("Failed to get problem condition from GeoLin.");
         }
-
-        var finalSeed = TryExtractSeedFromParams(condition.ProblemParams) ?? seedToUse;
 
         return new ProblemData
         {
             Name = problem.Name,
             Hash = problem.Hash,
             Condition = condition.Condition,
-            Seed = finalSeed,
-            ProblemParams = condition.ProblemParams
+            Seed = seed!.Value,
+            ProblemParams = condition.ProblemParams,
+            Description = problem.Description
         };
     }
 
-    public async Task<AnswerCheckResult> CheckAnswerAsync(string hash, string answerAttempt, int? seed = null, string? problemParams = null, CancellationToken ct = default)
+    public async Task<AnswerCheckResult> CheckAnswer(string hash, string answerAttempt, int seed, string problemParams, CancellationToken ct = default)
     {
-        var verdict = await GetAnswerVerdictAsync(hash, answerAttempt, seed, problemParams, ct);
+        var verdict = await GetAnswerVerdict(hash, answerAttempt, seed, problemParams, ct);
         var isCorrect = verdict >= GeolinConstants.CorrectAnswerVerdictThreshold;
 
         return new AnswerCheckResult
@@ -61,32 +61,21 @@ public class GeolinService : IGeolinService
         };
     }
 
-    private async Task<ProblemInfoResponse?> FindProblemByPrefixAsync(string prefix, CancellationToken ct)
+    private async Task<ProblemInfoResponse> FindProblemByPrefix(string prefix, CancellationToken ct)
     {
-        var problemPage = await _geolinApi.GetProblemsInfo(page: 1, size: 10, prefixName: prefix);
+        var problemPage = await _geolinApi.GetProblemsInfo(page: 1, size: 1, prefixName: prefix, ct: ct);
         
         if (problemPage.Problems.Count == 0)
         {
-            return null;
+            throw new InvalidOperationException($"Problem with prefix '{prefix}' not found");
         }
 
-        var problem = problemPage.Problems.FirstOrDefault(p => p.Name == prefix) 
-                     ?? problemPage.Problems.First();
+        var problem = problemPage.Problems.First();
 
-        return string.IsNullOrWhiteSpace(problem.Hash) ? null : problem;
+        return problem;
     }
 
-    private async Task<ProblemConditionResponse?> GetProblemConditionAsync(string hash, int seed, CancellationToken ct)
-    {
-               return await _geolinApi.GetProblemCondition(new ProblemConditionRequest
-               {
-                   Hash = hash,
-                   Seed = seed,
-                   Lang = LocalizationConstants.RussianLanguageCode
-               });
-    }
-
-    private async Task<double> GetAnswerVerdictAsync(string hash, string answerAttempt, int? seed, string? problemParams, CancellationToken ct)
+    private async Task<double> GetAnswerVerdict(string hash, string answerAttempt, int seed, string problemParams, CancellationToken ct)
     {
         var checkRequest = new ProblemAnswerCheckRequest
         {
@@ -96,31 +85,7 @@ public class GeolinService : IGeolinService
             ProblemParams = problemParams
         };
 
-        var response = await _geolinApi.CheckProblemAnswer(checkRequest);
+        var response = await _geolinApi.CheckProblemAnswer(checkRequest, ct);
         return response.Verdict;
     }
-
-    private static int? TryExtractSeedFromParams(string? problemParams)
-    {
-        if (string.IsNullOrWhiteSpace(problemParams))
-        {
-            return null;
-        }
-
-        try
-        {
-            using var doc = JsonDocument.Parse(problemParams);
-            if (doc.RootElement.TryGetProperty("seed", out var seedElement) && 
-                seedElement.ValueKind == JsonValueKind.Number)
-            {
-                return seedElement.GetInt32();
-            }
-        }
-        catch (JsonException)
-        {
-        }
-
-        return null;
-    }
-
 } 

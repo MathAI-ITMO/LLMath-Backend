@@ -26,6 +26,8 @@ public class ChatService(
 
     public async Task<Chat> Create(Chat chat, CancellationToken ct)
     {
+        await using var transaction = await _dbContext.Database.BeginTransactionAsync(ct);
+        
         chat.Type = ChatType.Chat;
         var chatEntry = await _dbContext.Chats.AddAsync(chat, ct);
         
@@ -37,11 +39,15 @@ public class ChatService(
         await _dbContext.Messages.AddAsync(systemMessage, ct);
         await _dbContext.SaveChangesAsync(ct);
         
+        await transaction.CommitAsync(ct);
+        
         return chatEntry.Entity;
     }
 
     public async Task<Chat> Create(Chat chat, Guid problemId, TaskType explicitTaskType, CancellationToken ct)
     {
+        await using var transaction = await _dbContext.Database.BeginTransactionAsync(ct);
+        
         chat.Type = ChatType.ProblemSolver;
         _logger.LogInformation("Creating chat for ProblemSolver. ProblemDB_ID: {ProblemDbId}, ExplicitTaskType: {ExplicitTaskType}", 
             problemId, explicitTaskType);
@@ -59,6 +65,8 @@ public class ChatService(
         var initialBotMessage = await GenerateInitialBotMessageAsync(newChat, problem, llmSolution, explicitTaskType, ct);
         await _dbContext.Messages.AddAsync(initialBotMessage, ct);
         await _dbContext.SaveChangesAsync(ct);
+        
+        await transaction.CommitAsync(ct);
         
         return newChat;
     }
@@ -196,43 +204,48 @@ public class ChatService(
 
     private async Task<string> CreateMessage(Message message, CancellationToken ct)
     {
-        await _dbContext.Messages.AddAsync(message, ct);
-        await _dbContext.SaveChangesAsync(ct);
-
+        var chatId = message.Chat?.Id ?? message.ChatId;
+        
         var currentChat = await _dbContext.Chats
             .Include(c => c.Messages) 
-            .FirstOrDefaultAsync(c => c.Id == message.ChatId, ct);
+            .FirstOrDefaultAsync(c => c.Id == chatId, ct);
 
         if (currentChat == null)
         {
-            _logger.LogError("Chat with ID {ChatId} not found in CreateMessage.", message.ChatId);
-            throw new NotFoundException($"Chat with ID {message.ChatId} not found.");
+            _logger.LogError("Chat with ID {ChatId} not found in CreateMessage.", chatId);
+            throw new NotFoundException($"Chat with ID {chatId} not found.");
         }
 
-        TaskType taskType = await DetermineTaskTypeAsync(currentChat, ct);
+        var taskType = await DetermineTaskTypeAsync(currentChat, ct);
 
         _logger.LogInformation("Generating (full) response in chat {ChatId} | taskType = {TaskType}", currentChat.Id, taskType);
         
         var messagesForLlm = currentChat.Messages.ToList();
+        messagesForLlm.Add(message);
         
         if (taskType == TaskType.Exam)
         {
             messagesForLlm.RemoveAll(m => m.IsSystemPrompt && m.Text.Contains(MessageConstants.TutorSolutionMarker));
         }
 
-        string llmResponseText = await _llmService.GenerateNextMessageAsync(messagesForLlm, taskType, ct);
+        var llmResponseText = await _llmService.GenerateNextMessageAsync(messagesForLlm, taskType, ct);
+        
+        await using var transaction = await _dbContext.Database.BeginTransactionAsync(ct);
+        await _dbContext.Messages.AddAsync(message, ct);
 
         if (!string.IsNullOrEmpty(llmResponseText))
         {
             var botMessage = new Message(currentChat, llmResponseText, MessageType.Assistant);
             await _dbContext.Messages.AddAsync(botMessage, ct);
-            await _dbContext.SaveChangesAsync(ct);
             _logger.LogInformation("LLM full response saved for chat {ChatId}. Length: {Length}", currentChat.Id, llmResponseText.Length);
         }
         else
         {
             _logger.LogWarning("LLM returned empty or null full response for chat {ChatId}", currentChat.Id);
         }
+        
+        await _dbContext.SaveChangesAsync(ct);
+        await transaction.CommitAsync(ct);
         
         return llmResponseText;
     }
