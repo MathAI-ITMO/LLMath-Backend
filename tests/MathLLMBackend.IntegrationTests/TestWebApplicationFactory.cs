@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -46,6 +47,7 @@ public class TestWebApplicationFactory : WebApplicationFactory<Program>
             {
                 options.UseInMemoryDatabase(_databaseName);
                 options.EnableSensitiveDataLogging();
+                options.ConfigureWarnings(w => w.Ignore(InMemoryEventId.TransactionIgnoredWarning));
             });
 
             var geolinApiDescriptor = services.SingleOrDefault(
@@ -117,6 +119,13 @@ public class TestWebApplicationFactory : WebApplicationFactory<Program>
         using var scope = Services.CreateScope();
         var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
         
+        // Check if user already exists
+        var existingUser = await userManager.FindByEmailAsync(email);
+        if (existingUser != null)
+        {
+            return existingUser;
+        }
+        
         var user = new ApplicationUser
         {
             UserName = email,
@@ -141,6 +150,18 @@ public class TestWebApplicationFactory : WebApplicationFactory<Program>
         if (!await roleManager.RoleExistsAsync(MathLLMBackend.Domain.Constants.Role.Admin))
         {
             await roleManager.CreateAsync(new IdentityRole(MathLLMBackend.Domain.Constants.Role.Admin));
+        }
+        
+        // Check if user already exists
+        var existingUser = await userManager.FindByEmailAsync(email);
+        if (existingUser != null)
+        {
+            // Ensure they have admin role
+            if (!await userManager.IsInRoleAsync(existingUser, MathLLMBackend.Domain.Constants.Role.Admin))
+            {
+                await userManager.AddToRoleAsync(existingUser, MathLLMBackend.Domain.Constants.Role.Admin);
+            }
+            return existingUser;
         }
         
         var user = new ApplicationUser

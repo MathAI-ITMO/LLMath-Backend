@@ -43,10 +43,10 @@ public class StatsControllerTests : BaseIntegrationTest
     }
 
     [Fact]
-    public async Task GetUserDetails_WithOtherUserId_ReturnsForbidden()
+    public async Task GetUserDetails_AsRegularUser_ReturnsForbidden()
     {
-        await CreateAndLoginAdminUserAsync();
-        var response = await AuthenticatedClient!.GetAsync("/api/stats/user-details/some-other-user-id");
+        await CreateAndLoginUserAsync();
+        var response = await AuthenticatedClient!.GetAsync("/api/stats/user-details/some-user-id");
 
         response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }

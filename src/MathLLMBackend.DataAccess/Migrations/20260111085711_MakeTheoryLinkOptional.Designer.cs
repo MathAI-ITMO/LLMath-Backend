@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace MathLLMBackend.DataAccess.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260110185419_InitialCreate")]
-    partial class InitialCreate
+    [Migration("20260111085711_MakeTheoryLinkOptional")]
+    partial class MakeTheoryLinkOptional
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -198,7 +198,6 @@ namespace MathLLMBackend.DataAccess.Migrations
                         .HasColumnType("text");
 
                     b.Property<string>("TheoryLink")
-                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<string>("Title")

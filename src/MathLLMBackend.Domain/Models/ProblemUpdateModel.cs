@@ -1,8 +1,8 @@
 using MathLLMBackend.Domain.Enums;
 
-namespace MathLLMBackend.Presentation.Dtos.Tasks;
+namespace MathLLMBackend.Domain.Models;
 
-public record CreateProblemRequestDto(
+public record ProblemUpdateModel(
     string Title,
     string Statement,
     string LlmSolution,

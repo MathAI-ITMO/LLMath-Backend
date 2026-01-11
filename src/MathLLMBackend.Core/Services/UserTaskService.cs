@@ -161,6 +161,7 @@ public class UserTaskService(
     public async Task<UserTask?> GetUserTaskByIdAsync(Guid userTaskId, string userId, CancellationToken cancellationToken = default)
     {
         var userTask = await _context.UserTasks
+            .Include(ut => ut.ProblemTaskType)
             .FirstOrDefaultAsync(ut => ut.Id == userTaskId && ut.ApplicationUserId == userId, cancellationToken);
         
         if (userTask == null)
@@ -174,6 +175,7 @@ public class UserTaskService(
     public async Task<UserTask?> CompleteTaskAsync(Guid userTaskId, string userId, CancellationToken cancellationToken = default)
     {
         var userTask = await _context.UserTasks
+            .Include(ut => ut.ProblemTaskType)
             .FirstOrDefaultAsync(ut => ut.Id == userTaskId && ut.ApplicationUserId == userId, cancellationToken);
 
         if (userTask == null)

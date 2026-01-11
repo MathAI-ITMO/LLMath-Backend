@@ -18,7 +18,7 @@ public class Problem
     public string LlmSolution { get; set; } = null!;
     public string Statement { get; set; } = null!;
     public string Title { get; set; } = null!;
-    public string TheoryLink { get; set; } = null!;
+    public string? TheoryLink { get; set; }
     public GeolinProblemData GeolinProblemData { get; set; } = null!;
     public virtual ICollection<ProblemTaskType> Types { get; set; } = new List<ProblemTaskType>();
 }

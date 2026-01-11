@@ -57,7 +57,7 @@ public class AppDbContext : IdentityDbContext<ApplicationUser>
         problem.Property(p => p.LlmSolution).IsRequired();
         problem.Property(p => p.Statement).IsRequired();
         problem.Property(p => p.Title).IsRequired();
-        problem.Property(p => p.TheoryLink).IsRequired();
+        problem.Property(p => p.TheoryLink).IsRequired(false);
         problem.HasMany(p => p.Types)
             .WithOne(p => p.Problem)
             .OnDelete(DeleteBehavior.Cascade);

@@ -2,6 +2,7 @@ using MathLLMBackend.Core.Services.ProblemsService;
 using MathLLMBackend.Domain.Constants;
 using MathLLMBackend.Domain.Entities;
 using MathLLMBackend.Domain.Enums;
+using MathLLMBackend.Domain.Models;
 using MathLLMBackend.Presentation.Dtos.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -32,72 +33,23 @@ public class ProblemsController(IProblemsService problemsService) : ControllerBa
     [HttpPost]
     public async Task<IActionResult> CreateProblem([FromBody] CreateProblemRequestDto dto, CancellationToken ct)
     {
-        var problem = new Problem
-        {
-            Title = dto.Title,
-            Statement = dto.Statement,
-            LlmSolution = dto.LlmSolution,
-            TheoryLink = dto.TheoryLink
-        };
-
-        if (!string.IsNullOrEmpty(dto.GeolinHash))
-        {
-            problem.GeolinProblemData = new GeolinProblemData(problem.Id, dto.GeolinHash, dto.GeolinSeed ?? 0);
-        }
-
-        var createdProblem = await _problemsService.CreateProblem(problem, ct);
-
-        foreach (var type in dto.Types)
-        {
-            await _problemsService.SetType(createdProblem.Id, type, ct);
-        }
-
-        var result = await _problemsService.GetProblem(createdProblem.Id, ct);
-        return Ok(MapToDto(result!));
+        var model = MapToModel(dto);
+        var problem = await _problemsService.CreateProblem(model, ct);
+        return Ok(MapToDto(problem));
     }
 
     [HttpPut("{id:guid}")]
     public async Task<IActionResult> UpdateProblem(Guid id, [FromBody] UpdateProblemRequestDto dto, CancellationToken ct)
     {
-        var problem = await _problemsService.GetProblem(id, ct);
+        var model = MapToModel(dto);
+        var problem = await _problemsService.UpdateProblem(id, model, ct);
+        
         if (problem == null)
         {
             return NotFound();
         }
 
-        problem.Title = dto.Title;
-        problem.Statement = dto.Statement;
-        problem.LlmSolution = dto.LlmSolution;
-        problem.TheoryLink = dto.TheoryLink;
-
-        if (!string.IsNullOrEmpty(dto.GeolinHash))
-        {
-            if (problem.GeolinProblemData == null)
-            {
-                problem.GeolinProblemData = new GeolinProblemData(problem.Id, dto.GeolinHash, dto.GeolinSeed ?? 0);
-            }
-            else
-            {
-                problem.GeolinProblemData.Hash = dto.GeolinHash;
-                problem.GeolinProblemData.Seed = dto.GeolinSeed ?? 0;
-            }
-        }
-        else
-        {
-            problem.GeolinProblemData = null!;
-        }
-
-        // Manage types.
-        await _problemsService.ClearTypes(problem.Id, ct);
-        foreach (var type in dto.Types)
-        {
-            await _problemsService.SetType(problem.Id, type, ct);
-        }
-
-        await _problemsService.UpdateProblem(problem, ct);
-
-        var result = await _problemsService.GetProblem(id, ct);
-        return Ok(MapToDto(result!));
+        return Ok(MapToDto(problem));
     }
 
     [HttpDelete("{id:guid}")]
@@ -106,6 +58,12 @@ public class ProblemsController(IProblemsService problemsService) : ControllerBa
         await _problemsService.DeleteProblem(id, ct);
         return NoContent();
     }
+
+    private static ProblemUpdateModel MapToModel(CreateProblemRequestDto dto) =>
+        new(dto.Title, dto.Statement, dto.LlmSolution, dto.TheoryLink, dto.GeolinHash, dto.GeolinSeed, dto.Types);
+
+    private static ProblemUpdateModel MapToModel(UpdateProblemRequestDto dto) =>
+        new(dto.Title, dto.Statement, dto.LlmSolution, dto.TheoryLink, dto.GeolinHash, dto.GeolinSeed, dto.Types);
 
     private static AdminProblemDto MapToDto(Problem problem)
     {

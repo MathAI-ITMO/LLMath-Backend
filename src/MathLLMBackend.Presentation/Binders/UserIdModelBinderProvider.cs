@@ -27,11 +27,6 @@ public class UserIdModelBinderProvider : IModelBinderProvider
                             return new JwtUserModelBinder();
                         }
                     }
-                    
-                    if (attribute is FromUserIdAttribute)
-                    {
-                        return new UserIdModelBinder();
-                    }
                 }
             }
         }
