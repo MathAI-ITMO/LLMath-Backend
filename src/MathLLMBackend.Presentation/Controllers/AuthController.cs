@@ -2,7 +2,9 @@ using MathLLMBackend.Core.Services.AuthService;
 using MathLLMBackend.Domain.Constants;
 using MathLLMBackend.Presentation.Dtos.Auth;
 using MathLLMBackend.Presentation.Dtos.Common;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace MathLLMBackend.Presentation.Controllers
 {
@@ -41,7 +43,7 @@ namespace MathLLMBackend.Presentation.Controllers
                     user.FirstName,
                     user.LastName,
                     user.StudentGroup,
-                    RoleConstants.User));
+                    Role.User));
             }
             catch (InvalidOperationException ex)
             {
@@ -57,6 +59,36 @@ namespace MathLLMBackend.Presentation.Controllers
                     status = StatusCodes.Status400BadRequest
                 });
             }
+        }
+
+        [HttpGet("validate")]
+        [AllowAnonymous]
+        public IActionResult Validate()
+        {
+            if (!User.Identity?.IsAuthenticated ?? true)
+            {
+                return StatusCode(StatusCodes.Status403Forbidden);
+            }
+
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId) || !Guid.TryParse(userId, out var userGuid))
+            {
+                return StatusCode(StatusCodes.Status403Forbidden);
+            }
+
+            var email = User.FindFirst(ClaimTypes.Email)?.Value ?? string.Empty;
+            var firstName = User.FindFirst(ClaimTypeConstants.FirstName)?.Value ?? string.Empty;
+            var lastName = User.FindFirst(ClaimTypeConstants.LastName)?.Value ?? string.Empty;
+            var studentGroup = User.FindFirst(ClaimTypeConstants.StudentGroup)?.Value ?? string.Empty;
+            var role = User.FindFirst(ClaimTypes.Role)?.Value ?? string.Empty;
+
+            return Ok(new UserInfoDto(
+                userGuid,
+                email,
+                firstName,
+                lastName,
+                studentGroup,
+                role));
         }
     }
 } 

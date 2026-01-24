@@ -46,7 +46,7 @@ public class WarmupService
 
     protected async Task SeedRolesAsync()
     {
-        var roles = new[] { RoleConstants.Admin, RoleConstants.User };
+        var roles = new[] { Role.Admin, Role.User };
 
         foreach (var role in roles)
         {

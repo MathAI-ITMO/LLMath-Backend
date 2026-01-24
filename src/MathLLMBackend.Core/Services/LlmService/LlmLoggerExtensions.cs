@@ -1,18 +1,18 @@
 using System.Text;
 using MathLLMBackend.Core.Configuration;
-using MathLLMBackend.Core.Constants;
 using MathLLMBackend.Domain.Entities;
+using MathLLMBackend.Domain.Enums;
 using Microsoft.Extensions.Logging;
 
 namespace MathLLMBackend.Core.Services.LlmService;
 
 internal static class LlmLoggerExtensions
 {
-    public static void LogLlmInteraction(this ILogger logger, int taskType, IEnumerable<Message> messages, string response, string modelName)
+    public static void LogLlmInteraction(this ILogger logger, TaskType taskType, IEnumerable<Message> messages, string response, string modelName)
     {
         var sb = new StringBuilder();
         sb.AppendLine($"==== LLM INTERACTION LOG - {DateTime.Now:yyyy-MM-dd HH:mm:ss} ====");
-        sb.AppendLine($"Task Type: {GetTaskTypeName(taskType)} (Code: {taskType})");
+        sb.AppendLine($"Task Type: {taskType} (Code: {(int)taskType})");
         sb.AppendLine($"Model: {modelName}");
         sb.AppendLine("\n--- MESSAGES SENT TO LLM ---");
         
@@ -42,17 +42,5 @@ internal static class LlmLoggerExtensions
         sb.AppendLine("=============================================");
         
         logger.LogInformation("LLM SOLUTION:\n{SolutionLog}", sb.ToString());
-    }
-    
-    private static string GetTaskTypeName(int taskType)
-    {
-        return taskType switch
-        {
-            TaskTypes.Default => "Default (Tutor)",
-            TaskTypes.Learning => "Learning",
-            TaskTypes.Guided => "Guided",
-            TaskTypes.Exam => "Exam",
-            _ => $"Unknown ({taskType})"
-        };
     }
 }

@@ -50,7 +50,7 @@ public class LlmService : ILlmService
         return solution;
     }
 
-    public async Task<string> GenerateNextMessageAsync(List<Message> messages, int taskType, CancellationToken ct)
+    public async Task<string> GenerateNextMessageAsync(List<Message> messages, TaskType taskType, CancellationToken ct)
     {
         var client = CreateChatClient(_config.Value.ChatModel);
 

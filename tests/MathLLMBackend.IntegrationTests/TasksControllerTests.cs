@@ -35,7 +35,7 @@ public class TasksControllerTests : BaseIntegrationTest
                 Number = 1
             });
 
-        await CreateAndLoginUserAsync();
+        await CreateAndLoginAdminUserAsync();
         var response = await AuthenticatedGetAsync("/api/tasks/problems");
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);

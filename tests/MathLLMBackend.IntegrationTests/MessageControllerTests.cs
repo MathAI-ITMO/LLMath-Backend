@@ -39,7 +39,7 @@ public class MessageControllerTests : BaseIntegrationTest
         
         Factory.LlmServiceMock.Reset();
         Factory.LlmServiceMock
-            .Setup(x => x.GenerateNextMessageAsync(It.IsAny<List<Message>>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.GenerateNextMessageAsync(It.IsAny<List<Message>>(), It.IsAny<TaskType>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync("Test response");
         
         var createRequest = new CreateChatRequestDto($"Test Chat {Guid.NewGuid()}", null);
@@ -113,7 +113,7 @@ public class MessageControllerTests : BaseIntegrationTest
         
         Factory.LlmServiceMock.Reset();
         Factory.LlmServiceMock
-            .Setup(x => x.GenerateNextMessageAsync(It.IsAny<List<Message>>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.GenerateNextMessageAsync(It.IsAny<List<Message>>(), It.IsAny<TaskType>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(string.Empty);
         
         var createRequest = new CreateChatRequestDto($"Test Chat {Guid.NewGuid()}", null);

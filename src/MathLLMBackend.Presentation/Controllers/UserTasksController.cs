@@ -1,7 +1,8 @@
-using MathLLMBackend.Core.Constants;
 using MathLLMBackend.Core.Services;
+using MathLLMBackend.Domain.Enums;
 using MathLLMBackend.Presentation.Dtos.Tasks;
 using MathLLMBackend.Presentation.Binders;
+using MathLLMBackend.Presentation.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -27,14 +28,14 @@ public class UserTasksController : ControllerBase
     [ProducesResponseType(typeof(IEnumerable<UserTaskDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    public async Task<IActionResult> GetUserTasks([FromUserId] string userId, [FromQuery] int taskType = TaskTypes.Default)
+    public async Task<IActionResult> GetUserTasks([FromJwt] JwtUser user, [FromQuery] TaskType taskType = TaskType.Default)
     {
-        var tasks = await _userTaskService.GetOrCreateUserTasksAsync(userId, taskType, HttpContext.RequestAborted);
+        var tasks = await _userTaskService.GetOrCreateUserTasksAsync(user.Id, taskType, HttpContext.RequestAborted);
         var dtos = tasks.Select(t => new UserTaskDto(
             t.Id,
             t.ProblemId,
             t.DisplayName,
-            t.TaskType,
+            t.ProblemTaskType.TaskType,
             t.Status,
             t.AssociatedChatId
         ));
@@ -46,15 +47,15 @@ public class UserTasksController : ControllerBase
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> StartUserTask(Guid userTaskId, [FromUserId] string userId, CancellationToken ct = default)
+    public async Task<IActionResult> StartUserTask(Guid userTaskId, [FromJwt] JwtUser user, CancellationToken ct = default)
     {
-        var task = await _userTaskService.StartUserTaskWithChatAsync(userTaskId, userId, ct);
+        var task = await _userTaskService.StartUserTaskWithChatAsync(userTaskId, user.Id, ct);
         
         var dto = new UserTaskDto(
             task.Id,
             task.ProblemId,
             task.DisplayName,
-            task.TaskType,
+            task.ProblemTaskType.TaskType,
             task.Status,
             task.AssociatedChatId
         );
@@ -66,9 +67,9 @@ public class UserTasksController : ControllerBase
     [ProducesResponseType(typeof(UserTaskDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> CompleteUserTask(Guid userTaskId, [FromUserId] string userId)
+    public async Task<IActionResult> CompleteUserTask(Guid userTaskId, [FromJwt] JwtUser user)
     {
-        var completedTask = await _userTaskService.CompleteTaskAsync(userTaskId, userId, HttpContext.RequestAborted);
+        var completedTask = await _userTaskService.CompleteTaskAsync(userTaskId, user.Id, HttpContext.RequestAborted);
         if (completedTask == null)
         {
             return NotFound();
@@ -78,7 +79,7 @@ public class UserTasksController : ControllerBase
             completedTask.Id,
             completedTask.ProblemId,
             completedTask.DisplayName,
-            completedTask.TaskType,
+            completedTask.ProblemTaskType.TaskType,
             completedTask.Status,
             completedTask.AssociatedChatId
         );

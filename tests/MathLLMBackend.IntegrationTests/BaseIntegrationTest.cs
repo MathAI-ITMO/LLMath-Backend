@@ -33,6 +33,14 @@ public abstract class BaseIntegrationTest : IClassFixture<TestWebApplicationFact
         return user;
     }
 
+    protected async Task<ApplicationUser> CreateAndLoginAdminUserAsync(string email = "admin@example.com", string password = "Test123!@#")
+    {
+        var user = await Factory.CreateTestAdminUserAsync(email, password);
+        TestUser = user;
+        AuthenticatedClient = Factory.CreateAuthenticatedClient(user);
+        return user;
+    }
+
     protected async Task<HttpResponseMessage> AuthenticatedGetAsync(string url)
     {
         AuthenticatedClient ??= await CreateAuthenticatedClientAsync();

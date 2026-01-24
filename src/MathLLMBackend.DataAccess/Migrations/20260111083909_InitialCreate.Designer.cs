@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace MathLLMBackend.DataAccess.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20250513004822_CreateUserTasksEntity")]
-    partial class CreateUserTasksEntity
+    [Migration("20260111083909_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -128,6 +128,32 @@ namespace MathLLMBackend.DataAccess.Migrations
                     b.ToTable("Chats");
                 });
 
+            modelBuilder.Entity("MathLLMBackend.Domain.Entities.GeolinProblemData", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Hash")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("ProblemId")
+                        .HasColumnType("uuid");
+
+                    b.Property<long>("Seed")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProblemId")
+                        .IsUnique();
+
+                    b.HasIndex("Seed", "Hash");
+
+                    b.ToTable("GeolinProblems");
+                });
+
             modelBuilder.Entity("MathLLMBackend.Domain.Entities.Message", b =>
                 {
                     b.Property<Guid>("Id")
@@ -157,6 +183,46 @@ namespace MathLLMBackend.DataAccess.Migrations
                     b.ToTable("Messages");
                 });
 
+            modelBuilder.Entity("MathLLMBackend.Domain.Entities.Problem", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("LlmSolution")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Statement")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("TheoryLink")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Problems");
+                });
+
+            modelBuilder.Entity("MathLLMBackend.Domain.Entities.ProblemTaskType", b =>
+                {
+                    b.Property<Guid>("ProblemId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("TaskType")
+                        .HasColumnType("integer");
+
+                    b.HasKey("ProblemId", "TaskType");
+
+                    b.ToTable("ProblemTaskTypes");
+                });
+
             modelBuilder.Entity("MathLLMBackend.Domain.Entities.UserTask", b =>
                 {
                     b.Property<Guid>("Id")
@@ -175,10 +241,12 @@ namespace MathLLMBackend.DataAccess.Migrations
                         .HasMaxLength(1024)
                         .HasColumnType("character varying(1024)");
 
-                    b.Property<string>("ProblemId")
+                    b.Property<string>("ProblemHash")
                         .IsRequired()
-                        .HasMaxLength(512)
-                        .HasColumnType("character varying(512)");
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("ProblemId")
+                        .HasColumnType("uuid");
 
                     b.Property<int>("Status")
                         .HasColumnType("integer");
@@ -195,6 +263,8 @@ namespace MathLLMBackend.DataAccess.Migrations
                     b.HasIndex("ProblemId");
 
                     b.HasIndex("ApplicationUserId", "TaskType");
+
+                    b.HasIndex("ProblemId", "TaskType");
 
                     b.ToTable("UserTasks");
                 });
@@ -342,6 +412,15 @@ namespace MathLLMBackend.DataAccess.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("MathLLMBackend.Domain.Entities.GeolinProblemData", b =>
+                {
+                    b.HasOne("MathLLMBackend.Domain.Entities.Problem", null)
+                        .WithOne("GeolinProblemData")
+                        .HasForeignKey("MathLLMBackend.Domain.Entities.GeolinProblemData", "ProblemId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("MathLLMBackend.Domain.Entities.Message", b =>
                 {
                     b.HasOne("MathLLMBackend.Domain.Entities.Chat", "Chat")
@@ -353,6 +432,17 @@ namespace MathLLMBackend.DataAccess.Migrations
                     b.Navigation("Chat");
                 });
 
+            modelBuilder.Entity("MathLLMBackend.Domain.Entities.ProblemTaskType", b =>
+                {
+                    b.HasOne("MathLLMBackend.Domain.Entities.Problem", "Problem")
+                        .WithMany("Types")
+                        .HasForeignKey("ProblemId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Problem");
+                });
+
             modelBuilder.Entity("MathLLMBackend.Domain.Entities.UserTask", b =>
                 {
                     b.HasOne("MathLLMBackend.Domain.Entities.ApplicationUser", "ApplicationUser")
@@ -361,7 +451,23 @@ namespace MathLLMBackend.DataAccess.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("MathLLMBackend.Domain.Entities.Problem", "Problem")
+                        .WithMany()
+                        .HasForeignKey("ProblemId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("MathLLMBackend.Domain.Entities.ProblemTaskType", "ProblemTaskType")
+                        .WithMany()
+                        .HasForeignKey("ProblemId", "TaskType")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
                     b.Navigation("ApplicationUser");
+
+                    b.Navigation("Problem");
+
+                    b.Navigation("ProblemTaskType");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
@@ -418,6 +524,14 @@ namespace MathLLMBackend.DataAccess.Migrations
             modelBuilder.Entity("MathLLMBackend.Domain.Entities.Chat", b =>
                 {
                     b.Navigation("Messages");
+                });
+
+            modelBuilder.Entity("MathLLMBackend.Domain.Entities.Problem", b =>
+                {
+                    b.Navigation("GeolinProblemData")
+                        .IsRequired();
+
+                    b.Navigation("Types");
                 });
 #pragma warning restore 612, 618
         }

@@ -1,6 +1,9 @@
+using MathLLMBackend.Core.Constants;
 using MathLLMBackend.Core.Services.StatsService;
+using MathLLMBackend.Domain.Constants;
 using MathLLMBackend.Presentation.Binders;
 using MathLLMBackend.Presentation.Dtos.Stats;
+using MathLLMBackend.Presentation.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -19,17 +22,15 @@ public class StatsController : ControllerBase
     }
 
     [HttpGet("task-mode-titles")]
+    [Authorize(Roles = Role.Admin)]
     public async Task<IActionResult> GetTaskModeTitles(CancellationToken ct = default)
     {
-        var taskModeTitles = await _statsService.GetTaskModeTitlesAsync(ct);
-        if (taskModeTitles.Count == 0)
-        {
-            return NotFound("TaskModeTitles not found in configuration.");
-        }
-        return Ok(taskModeTitles);
+        var result = TaskModeTitles.Titles;
+        return Ok(result);
     }
 
     [HttpGet("user-stats")]
+    [Authorize(Roles = Role.Admin)]
     public async Task<IActionResult> GetUserStats(CancellationToken ct = default)
     {
         var stats = await _statsService.GetUserStatsAsync(ct);
@@ -50,12 +51,9 @@ public class StatsController : ControllerBase
     }
 
     [HttpGet("user-details/{userId}")]
-    public async Task<IActionResult> GetUserDetails(string userId, [FromUserId] string currentUserId, CancellationToken ct = default)
+    [Authorize(Roles = Role.Admin)]
+    public async Task<IActionResult> GetUserDetails(string userId, [FromJwt] JwtUser currentUser, CancellationToken ct = default)
     {
-        if (userId != currentUserId)
-        {
-            return Forbid();
-        }
 
         var detail = await _statsService.GetUserDetailsAsync(userId, ct);
         

@@ -1,5 +1,5 @@
 using MathLLMBackend.Core.Configuration;
-using MathLLMBackend.Core.Constants;
+using MathLLMBackend.Domain.Enums;
 using Microsoft.Extensions.Options;
 
 namespace MathLLMBackend.Core.Services.PromptService;
@@ -48,13 +48,13 @@ public class PromptService(IOptions<PromptConfiguration> promptConfiguration) : 
         return _promptConfiguration.ExamSystemPrompt;
     }
     
-    public string GetSystemPromptByTaskType(int taskType)
+    public string GetSystemPromptByTaskType(TaskType taskType)
     {
         return taskType switch
         {
-            TaskTypes.Learning => GetLearningSystemPrompt(),
-            TaskTypes.Guided => GetGuidedSystemPrompt(),
-            TaskTypes.Exam => GetExamSystemPrompt(),
+            TaskType.Learning => GetLearningSystemPrompt(),
+            TaskType.Guided => GetGuidedSystemPrompt(),
+            TaskType.Exam => GetExamSystemPrompt(),
             _ => GetTutorSystemPrompt()
         };
     }
@@ -80,13 +80,13 @@ public class PromptService(IOptions<PromptConfiguration> promptConfiguration) : 
         return _promptConfiguration.ExamInitialPrompt;
     }
     
-    public string GetInitialPromptByTaskType(int taskType, string condition, string firstStep)
+    public string GetInitialPromptByTaskType(TaskType taskType, string condition, string firstStep)
     {
         return taskType switch
         {
-            TaskTypes.Learning => GetLearningInitialPrompt(condition, firstStep),
-            TaskTypes.Guided => GetGuidedInitialPrompt(),
-            TaskTypes.Exam => GetExamInitialPrompt(),
+            TaskType.Learning => GetLearningInitialPrompt(condition, firstStep),
+            TaskType.Guided => GetGuidedInitialPrompt(),
+            TaskType.Exam => GetExamInitialPrompt(),
             _ => GetTutorInitialPrompt()
         };
     }

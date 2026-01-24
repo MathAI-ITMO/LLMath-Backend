@@ -37,7 +37,7 @@ public class AuthService : IAuthService
 
         if (result.Succeeded)
         {
-            await _userManager.AddToRoleAsync(user, RoleConstants.User);
+            await _userManager.AddToRoleAsync(user, Role.User);
             _logger.LogInformation("User created a new account with extended profile.");
             return user;
         }

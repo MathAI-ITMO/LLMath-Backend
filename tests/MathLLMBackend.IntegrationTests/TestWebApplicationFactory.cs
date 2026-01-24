@@ -5,12 +5,12 @@ using MathLLMBackend.DataAccess.Services;
 using MathLLMBackend.Domain.Entities;
 using MathLLMBackend.GeolinClient;
 using MathLLMBackend.GeolinClient.Options;
-using MathLLMBackend.ProblemsClient;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -22,7 +22,6 @@ public class TestWebApplicationFactory : WebApplicationFactory<Program>
     private readonly string _databaseName = "TestDb_" + Guid.NewGuid();
     
     public Mock<IGeolinApi> GeolinApiMock { get; } = new();
-    public Mock<IProblemsAPI> ProblemsApiMock { get; } = new();
     public Mock<ILlmService> LlmServiceMock { get; } = new();
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
@@ -48,6 +47,7 @@ public class TestWebApplicationFactory : WebApplicationFactory<Program>
             {
                 options.UseInMemoryDatabase(_databaseName);
                 options.EnableSensitiveDataLogging();
+                options.ConfigureWarnings(w => w.Ignore(InMemoryEventId.TransactionIgnoredWarning));
             });
 
             var geolinApiDescriptor = services.SingleOrDefault(
@@ -57,14 +57,6 @@ public class TestWebApplicationFactory : WebApplicationFactory<Program>
                 services.Remove(geolinApiDescriptor);
             }
             services.AddSingleton(GeolinApiMock.Object);
-
-            var problemsApiDescriptor = services.SingleOrDefault(
-                d => d.ServiceType == typeof(IProblemsAPI));
-            if (problemsApiDescriptor != null)
-            {
-                services.Remove(problemsApiDescriptor);
-            }
-            services.AddSingleton(ProblemsApiMock.Object);
 
             var llmServiceDescriptor = services.SingleOrDefault(
                 d => d.ServiceType == typeof(ILlmService));
@@ -81,8 +73,22 @@ public class TestWebApplicationFactory : WebApplicationFactory<Program>
                 options.Password.RequiredLength = 3;
             });
 
-            services.AddAuthentication("Test")
-                .AddScheme<AuthenticationSchemeOptions, TestAuthenticationHandler>("Test", options => { });
+            // Configure authentication with Test as default scheme
+            services.AddAuthentication(options =>
+            {
+                options.DefaultAuthenticateScheme = "Test";
+                options.DefaultChallengeScheme = "Test";
+                options.DefaultScheme = "Test";
+            })
+            .AddScheme<AuthenticationSchemeOptions, TestAuthenticationHandler>("Test", options => { });
+            
+            // Ensure Test scheme is always used as default, even after Identity configuration
+            services.PostConfigure<AuthenticationOptions>(options =>
+            {
+                options.DefaultAuthenticateScheme = "Test";
+                options.DefaultChallengeScheme = "Test";
+                options.DefaultScheme = "Test";
+            });
 
             services.Configure<GeolinClientOptions>(options =>
             {
@@ -113,6 +119,13 @@ public class TestWebApplicationFactory : WebApplicationFactory<Program>
         using var scope = Services.CreateScope();
         var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
         
+        // Check if user already exists
+        var existingUser = await userManager.FindByEmailAsync(email);
+        if (existingUser != null)
+        {
+            return existingUser;
+        }
+        
         var user = new ApplicationUser
         {
             UserName = email,
@@ -123,7 +136,45 @@ public class TestWebApplicationFactory : WebApplicationFactory<Program>
         };
 
         await userManager.CreateAsync(user, password);
-        await userManager.AddToRoleAsync(user, MathLLMBackend.Domain.Constants.RoleConstants.User);
+        await userManager.AddToRoleAsync(user, MathLLMBackend.Domain.Constants.Role.User);
+        return user;
+    }
+
+    public async Task<ApplicationUser> CreateTestAdminUserAsync(string email = "admin@example.com", string password = "Test123!@#")
+    {
+        using var scope = Services.CreateScope();
+        var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+        var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
+        
+        // Ensure admin role exists
+        if (!await roleManager.RoleExistsAsync(MathLLMBackend.Domain.Constants.Role.Admin))
+        {
+            await roleManager.CreateAsync(new IdentityRole(MathLLMBackend.Domain.Constants.Role.Admin));
+        }
+        
+        // Check if user already exists
+        var existingUser = await userManager.FindByEmailAsync(email);
+        if (existingUser != null)
+        {
+            // Ensure they have admin role
+            if (!await userManager.IsInRoleAsync(existingUser, MathLLMBackend.Domain.Constants.Role.Admin))
+            {
+                await userManager.AddToRoleAsync(existingUser, MathLLMBackend.Domain.Constants.Role.Admin);
+            }
+            return existingUser;
+        }
+        
+        var user = new ApplicationUser
+        {
+            UserName = email,
+            Email = email,
+            FirstName = "Admin",
+            LastName = "User",
+            StudentGroup = "AdminGroup"
+        };
+
+        await userManager.CreateAsync(user, password);
+        await userManager.AddToRoleAsync(user, MathLLMBackend.Domain.Constants.Role.Admin);
         return user;
     }
 

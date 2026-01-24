@@ -1,6 +1,7 @@
 using FluentAssertions;
 using MathLLMBackend.Core.Configuration;
 using MathLLMBackend.Core.Services.PromptService;
+using MathLLMBackend.Domain.Enums;
 using Microsoft.Extensions.Options;
 using Xunit;
 
@@ -64,73 +65,65 @@ public class PromptServiceTests
     }
 
     [Fact]
-    public void GetSystemPromptByTaskType_ReturnsCorrectPromptForTaskType0()
+    public void GetSystemPromptByTaskType_ReturnsCorrectPromptForDefault()
     {
-        var result = _service.GetSystemPromptByTaskType(0);
+        var result = _service.GetSystemPromptByTaskType(TaskType.Default);
 
         result.Should().Be(_config.TutorSystemPrompt);
     }
 
     [Fact]
-    public void GetSystemPromptByTaskType_ReturnsCorrectPromptForTaskType1()
+    public void GetSystemPromptByTaskType_ReturnsCorrectPromptForLearning()
     {
-        var result = _service.GetSystemPromptByTaskType(1);
+        var result = _service.GetSystemPromptByTaskType(TaskType.Learning);
 
         result.Should().Be(_config.LearningSystemPrompt);
     }
 
     [Fact]
-    public void GetSystemPromptByTaskType_ReturnsCorrectPromptForTaskType2()
+    public void GetSystemPromptByTaskType_ReturnsCorrectPromptForGuided()
     {
-        var result = _service.GetSystemPromptByTaskType(2);
+        var result = _service.GetSystemPromptByTaskType(TaskType.Guided);
 
         result.Should().Be(_config.GuidedSystemPrompt);
     }
 
     [Fact]
-    public void GetSystemPromptByTaskType_ReturnsCorrectPromptForTaskType3()
+    public void GetSystemPromptByTaskType_ReturnsCorrectPromptForExam()
     {
-        var result = _service.GetSystemPromptByTaskType(3);
+        var result = _service.GetSystemPromptByTaskType(TaskType.Exam);
 
         result.Should().Be(_config.ExamSystemPrompt);
     }
 
     [Fact]
-    public void GetSystemPromptByTaskType_ReturnsTutorPromptForUnknownTaskType()
+    public void GetInitialPromptByTaskType_ReturnsCorrectPromptForDefault()
     {
-        var result = _service.GetSystemPromptByTaskType(99);
-
-        result.Should().Be(_config.TutorSystemPrompt);
-    }
-
-    [Fact]
-    public void GetInitialPromptByTaskType_ReturnsCorrectPromptForTaskType0()
-    {
-        var result = _service.GetInitialPromptByTaskType(0, "condition", "firstStep");
+        var result = _service.GetInitialPromptByTaskType(TaskType.Default, "condition", "firstStep");
 
         result.Should().Be(_config.TutorInitialPrompt);
     }
 
     [Fact]
-    public void GetInitialPromptByTaskType_ReturnsCorrectPromptForTaskType1()
+    public void GetInitialPromptByTaskType_ReturnsCorrectPromptForLearning()
     {
-        var result = _service.GetInitialPromptByTaskType(1, "condition", "firstStep");
+        var result = _service.GetInitialPromptByTaskType(TaskType.Learning, "condition", "firstStep");
 
         result.Should().Be(_config.LearningInitialPrompt);
     }
 
     [Fact]
-    public void GetInitialPromptByTaskType_ReturnsCorrectPromptForTaskType2()
+    public void GetInitialPromptByTaskType_ReturnsCorrectPromptForGuided()
     {
-        var result = _service.GetInitialPromptByTaskType(2, "condition", "firstStep");
+        var result = _service.GetInitialPromptByTaskType(TaskType.Guided, "condition", "firstStep");
 
         result.Should().Be(_config.GuidedInitialPrompt);
     }
 
     [Fact]
-    public void GetInitialPromptByTaskType_ReturnsCorrectPromptForTaskType3()
+    public void GetInitialPromptByTaskType_ReturnsCorrectPromptForExam()
     {
-        var result = _service.GetInitialPromptByTaskType(3, "condition", "firstStep");
+        var result = _service.GetInitialPromptByTaskType(TaskType.Exam, "condition", "firstStep");
 
         result.Should().Be(_config.ExamInitialPrompt);
     }

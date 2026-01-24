@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using System.Reflection;
+using MathLLMBackend.Presentation.Models;
 
 namespace MathLLMBackend.Presentation.Binders;
 
@@ -19,9 +20,12 @@ public class UserIdModelBinderProvider : IModelBinderProvider
             {
                 foreach (var attribute in parameterInfo.Attributes.Attributes)
                 {
-                    if (attribute is FromUserIdAttribute)
+                    if (attribute is FromJwtAttribute)
                     {
-                        return new UserIdModelBinder();
+                        if (context.Metadata.ModelType == typeof(JwtUser))
+                        {
+                            return new JwtUserModelBinder();
+                        }
                     }
                 }
             }

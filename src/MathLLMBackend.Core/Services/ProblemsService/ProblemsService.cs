@@ -1,104 +1,150 @@
-using MathLLMBackend.Core.Constants;
-using MathLLMBackend.GeolinClient;
-using MathLLMBackend.GeolinClient.Models;
-using MathLLMBackend.ProblemsClient;
-using MathLLMBackend.ProblemsClient.Models;
-using Microsoft.Extensions.Logging;
-using Refit;
+using MathLLMBackend.DataAccess.Contexts;
+using MathLLMBackend.Domain.Entities;
+using MathLLMBackend.Domain.Enums;
+using MathLLMBackend.Domain.Models;
+using Microsoft.EntityFrameworkCore;
 
 namespace MathLLMBackend.Core.Services.ProblemsService;
 
-public class ProblemsService : IProblemsService
+public class ProblemsService(AppDbContext dbContext) : IProblemsService
 {
-    private readonly IProblemsAPI _problemsApi;
-    private readonly IGeolinApi _geolinApi;
-    private readonly ILogger<ProblemsService> _logger;
-    public ProblemsService(IProblemsAPI problemsApi, IGeolinApi geolinApi, ILogger<ProblemsService> logger)
+    private readonly AppDbContext _dbContext = dbContext;
+
+    public async Task<IEnumerable<Problem>> GetProblems(CancellationToken ct)
     {
-        _problemsApi = problemsApi;
-        _geolinApi = geolinApi;
-        _logger = logger;
+        return await _dbContext.Problems
+            .Include(p => p.Types)
+            .Include(p => p.GeolinProblemData)
+            .ToListAsync(ct);
     }
-    public async Task<List<Problem>> GetSavedProblems(CancellationToken ct = default)
+
+    public async Task<IEnumerable<Problem>> GetProblemsByType(TaskType taskType, CancellationToken ct)
     {
-        return await _problemsApi.GetProblems();
+        return await _dbContext.Problems
+            .Include(p => p.Types)
+            .Include(p => p.GeolinProblemData)
+            .Where(p => p.Types.Any(t => t.TaskType == taskType))
+            .ToListAsync(ct);
     }
-    
-    public async Task<List<Problem>> SaveProblems(string name, string problemHash, int variationCount, CancellationToken ct = default)
+
+    public async Task<Problem?> GetProblem(Guid problemId, CancellationToken ct)
     {
-        List<Problem> result = new();
-        for (var i = 0; i < variationCount; ++i)
-        {
-            var seed = new Random().Next();
-            var problem = await _geolinApi.GetProblemCondition(
-                new ProblemConditionRequest()
-                {
-                    Hash = problemHash,
-                    Seed = seed,
-                    Lang = LocalizationConstants.RussianLanguageCode
-                });
-            var problemMongo = new ProblemRequest()
-            {
-                Statement = problem.Condition,
-                GeolinAnsKey = new GeolinKey()
-                {
-                    Hash = problemHash,
-                    Seed = seed
-                }
-            };
-            var createdProblem = await _problemsApi.CreateProblem(problemMongo);
-            result.Add(createdProblem);
-            
-            await _problemsApi.GiveANameProblem(new ProblemWithNameRequest()
-            {
-                Name = name,
-                ProblemId = createdProblem.Id
-            });
-        }
-        return result;
+        return await _dbContext.Problems
+            .Include(p => p.Types)
+            .Include(p => p.GeolinProblemData)
+            .FirstOrDefaultAsync(p => p.Id == problemId, ct);
     }
-    
-    public async Task<List<Problem>> GetSavedProblemsByNames(string name, CancellationToken ct = default)
+
+    public async Task<Problem?> UpdateProblem(Guid problemId, ProblemUpdateModel model, CancellationToken ct)
     {
-        try
+        await using var transaction = await _dbContext.Database.BeginTransactionAsync(ct);
+
+        var problem = await _dbContext.Problems
+            .Include(p => p.Types)
+            .Include(p => p.GeolinProblemData)
+            .FirstOrDefaultAsync(p => p.Id == problemId, ct);
+
+        if (problem == null)
         {
-            var problems = await _problemsApi.GetAllProblemsByName(name);
-            return problems;
-        }
-        catch (ApiException apiEx) when (apiEx.StatusCode == System.Net.HttpStatusCode.NotFound)
-        {
-            return new List<Problem>();
-        }
-    }
-    
-    public async Task<List<Problem>> GetSavedProblemsByTypes(string typeName, CancellationToken ct = default)
-    {
-        try
-        {
-            var problems = await _problemsApi.GetProblemsByType(typeName);
-            return problems;
-        }
-        catch (ApiException apiEx) when (apiEx.StatusCode == System.Net.HttpStatusCode.NotFound)
-        {
-            return new List<Problem>();
-        }
-    }
-    
-    public async Task<List<string>> GetAllTypes(CancellationToken ct = default)
-    {
-        return await _problemsApi.GetTypes();
-    }
-    
-    public async Task<Problem?> GetProblemFromDbAsync(string problemDbId, CancellationToken ct = default)
-    {
-        try  
-        {
-            return await _problemsApi.GetProblemById(problemDbId);
-        }
-        catch (ApiException apiEx) when (apiEx.StatusCode == System.Net.HttpStatusCode.NotFound)
-        {
-            _logger.LogWarning("Problem with ID {ProblemDbId} not found in LLMath-Problems DB.", problemDbId);
             return null;
+        }
+
+        problem.Title = model.Title;
+        problem.Statement = model.Statement;
+        problem.LlmSolution = model.LlmSolution;
+        problem.TheoryLink = model.TheoryLink;
+
+        UpdateGeolinData(problem, model);
+        UpdateTypes(problem, model.Types);
+
+        await _dbContext.SaveChangesAsync(ct);
+        await transaction.CommitAsync(ct);
+
+        return problem;
+    }
+
+    public async Task<Problem> CreateProblem(ProblemUpdateModel model, CancellationToken ct)
+    {
+        await using var transaction = await _dbContext.Database.BeginTransactionAsync(ct);
+
+        var problem = new Problem
+        {
+            Title = model.Title,
+            Statement = model.Statement,
+            LlmSolution = model.LlmSolution,
+            TheoryLink = model.TheoryLink
+        };
+
+        if (!string.IsNullOrEmpty(model.GeolinHash))
+        {
+            problem.GeolinProblemData = new GeolinProblemData(problem.Id, model.GeolinHash, model.GeolinSeed ?? 0);
+        }
+
+        _dbContext.Problems.Add(problem);
+
+        foreach (var type in model.Types)
+        {
+            var problemTaskType = new ProblemTaskType(problem, type);
+            _dbContext.ProblemTaskTypes.Add(problemTaskType);
+        }
+
+        await _dbContext.SaveChangesAsync(ct);
+        await transaction.CommitAsync(ct);
+
+        return problem;
+    }
+
+    public async Task DeleteProblem(Guid problemId, CancellationToken ct)
+    {
+        var problem = await _dbContext.Problems.FindAsync([problemId], ct);
+        if (problem != null)
+        {
+            _dbContext.Problems.Remove(problem);
+            await _dbContext.SaveChangesAsync(ct);
+        }
+    }
+
+    private void UpdateGeolinData(Problem problem, ProblemUpdateModel model)
+    {
+        if (!string.IsNullOrEmpty(model.GeolinHash))
+        {
+            if (problem.GeolinProblemData == null)
+            {
+                var geolinData = new GeolinProblemData(problem.Id, model.GeolinHash, model.GeolinSeed ?? 0);
+                _dbContext.GeolinProblems.Add(geolinData);
+                problem.GeolinProblemData = geolinData;
+            }
+            else
+            {
+                problem.GeolinProblemData.Hash = model.GeolinHash;
+                problem.GeolinProblemData.Seed = model.GeolinSeed ?? 0;
+            }
+        }
+        else if (problem.GeolinProblemData != null)
+        {
+            _dbContext.GeolinProblems.Remove(problem.GeolinProblemData);
+            problem.GeolinProblemData = null!;
+        }
+    }
+
+    private void UpdateTypes(Problem problem, IEnumerable<TaskType> newTypes)
+    {
+        var newTypesSet = newTypes.ToHashSet();
+        var existingTypes = problem.Types.Select(t => t.TaskType).ToHashSet();
+
+        // Remove types that are no longer present
+        var typesToRemove = problem.Types.Where(t => !newTypesSet.Contains(t.TaskType)).ToList();
+        foreach (var type in typesToRemove)
+        {
+            problem.Types.Remove(type);
+            _dbContext.ProblemTaskTypes.Remove(type);
+        }
+
+        // Add new types
+        foreach (var type in newTypesSet.Except(existingTypes))
+        {
+            var problemTaskType = new ProblemTaskType(problem, type);
+            problem.Types.Add(problemTaskType);
         }
     }
 }
